@@ -1,0 +1,3447 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title data-lang-key="appNameWorker">Nedjma Worker</title>
+<!-- Google Fonts: Tajawal -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<script src="lang.js"></script>
+
+<style>
+  :root{
+    --primary:#0f766e; /* teal */
+    --accent:#ff6c00;  /* orange */
+    --bg:#f0f2f5;
+    --card: #ffffff;
+    --muted: #4b5563; /* improved contrast */
+    --border-color: #e5e7eb;
+    --text-primary: #1f2937;
+  }
+  body.dark{
+    --primary: #ff6c00;
+    --accent: #ff6c00;
+    --bg: #1e1e2d;
+    --card: #27293d;
+    --muted: #cbd5e1; /* improved contrast in dark */
+    --border-color: rgba(255, 255, 255, 0.1);
+    --text-primary: #f1f5f9;
+  }
+  html,body{height:100%}
+  body{
+    margin:0;font-family: 'Tajawal', sans-serif; 
+    background-color: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing:antialiased; text-rendering: optimizeLegibility;
+    display:flex;flex-direction:column;min-height:100vh;
+    font-weight:500; /* slightly bolder for readability */
+  }
+
+  /* Improve readability of small text across the app */
+  [style*="font-size:12px"],
+  [style*="font-size: 12px"]{ font-size:13px !important; font-weight:600 !important; letter-spacing:.1px; }
+  [style*="font-size:13px"],
+  [style*="font-size: 13px"]{ font-weight:600; letter-spacing:.1px; }
+  h3,h4{ letter-spacing:.2px; }
+  
+  /* --- Splash Screen Styles --- */
+  .splash{
+    position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 10% 20%, rgba(14,165,233,.25), transparent 60%),
+               radial-gradient(circle at 80% 0%, rgba(249,115,22,.25), transparent 55%),
+               linear-gradient(135deg, #0f172a, #1d1f2b);
+    color:white; z-index:60;
+    transition:opacity .45s ease-out, visibility .45s, transform .45s;
+    padding:24px;
+  }
+  .splash.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+  .splash.hidden .splash-content{ transform: translateY(12px) scale(.995); }
+  .splash-content {
+    width:min(620px, 100%);
+    animation: fadeInFromBottom 0.9s cubic-bezier(0.22, 0.9, 0.35, 1) forwards;
+  }
+  @keyframes fadeInFromBottom {
+    from { opacity: 0; transform: translateY(25px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .progress-bar-container {
+    width: 140px; height: 5px; background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 5px; margin: 28px auto 0; overflow: hidden;
+  }
+  .progress-bar-line {
+    width: 100%; height: 100%; background-color: var(--accent);
+    border-radius: 5px;
+    animation: indeterminate-progress 1.5s infinite cubic-bezier(0.65, 0.815, 0.735, 0.395);
+  }
+  @keyframes indeterminate-progress {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  /* Decorative floating blobs on splash */
+  .splash-blobs{position:absolute; inset:0; overflow:hidden; pointer-events:none}
+  .blob{position:absolute; filter:blur(36px); opacity:.55; mix-blend-mode:screen; animation: float 8s ease-in-out infinite; border-radius:50%;}
+  .blob.b1{width:360px;height:360px;background:radial-gradient(circle at 30% 30%, rgba(99,102,241,0.95), rgba(99,102,241,0.35)); left:-80px; top:-60px; animation-duration:10s}
+  .blob.b2{width:300px;height:300px;background:radial-gradient(circle at 70% 70%, rgba(16,185,129,0.85), rgba(16,185,129,0.25)); right:-120px; bottom:-80px; animation-duration:12s}
+  @keyframes float{0%{transform:translateY(0) translateX(0)}50%{transform:translateY(-18px) translateX(10px)}100%{transform:translateY(0) translateX(0)}}
+
+  /* Splash card (glass) */
+  .splash-card{
+    background:rgba(15,23,42,0.7);
+    border-radius:32px;
+    padding:36px 32px;
+    box-shadow:0 26px 90px rgba(0,0,0,0.42);
+    border:1px solid rgba(255,255,255,0.08);
+    backdrop-filter:blur(22px);
+    color:#f8fafc;
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+    text-align:center;
+  }
+  .splash-logo-wrap{
+    width:82px;height:82px;margin:0 auto;border-radius:24px;
+    background:linear-gradient(135deg,#06b6d4,#67e8f9);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 20px 50px rgba(6,182,212,.45);
+  }
+  .splash-logo-wrap img{width:60px;height:60px;border-radius:18px;object-fit:cover;}
+  .splash-title{font-size:28px;font-weight:800;letter-spacing:.5px;margin:0;}
+  .splash-tagline{margin:0;font-size:14px;color:rgba(248,250,252,.85);}
+  .splash-badge{font-size:12px;color:rgba(248,250,252,.7);}
+  .splash-footer{display:flex;flex-direction:column;gap:10px;}
+  .loading-status{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:rgba(248,250,252,0.85);font-weight:600;letter-spacing:.2px;}
+  .loading-bar{width:100%;height:6px;border-radius:999px;background:rgba(248,250,252,0.12);overflow:hidden;}
+  .loading-fill{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#06b6d4,#3b82f6);width:0%;transition:width .3s ease;}
+  /* Responsive tweaks */
+  @media (max-width: 600px){
+    .splash-card{padding:26px 22px; border-radius:24px;}
+    .splash-title{font-size:24px;}
+    .splash-logo-wrap{width:72px;height:72px;}
+    .splash-logo-wrap img{width:52px;height:52px;}
+  }
+  @media (min-width: 1200px){
+    .splash-content{width:min(720px, 100%)}
+    .splash-title{font-size:30px;}
+  }
+  /* --- End Splash Screen Styles --- */
+
+  /* --- Responsive App Layout --- */
+  .app-layout {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    visibility: hidden; /* Hidden until splash is done */
+  }
+
+  .app{
+    display:flex;
+    flex-direction:column;
+    flex:1; 
+    visibility: hidden; /* Hidden until splash is done */
+    padding-bottom: 70px; /* Space for mobile bottom nav */
+  }
+
+  /* Fading effect at the bottom of the content area on mobile */
+  .content-fade {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100px; /* Adjust height of the fade */
+    background: linear-gradient(to top, var(--bg) 20%, transparent);
+    pointer-events: none; /* Allows clicks to pass through */
+    z-index: 50; /* Above content, below nav bar */
+    transition: background 0.3s ease;
+  }
+
+  header.app-header{
+    display:flex; align-items:center; justify-content:space-between; padding:12px 16px; position:sticky; top:0; z-index:40;
+    background:rgba(255,255,255,.7); backdrop-filter: blur(6px); border-bottom:1px solid rgba(2,6,23,.04)
+  }
+  body.dark header.app-header{background:rgba(255,255,255,.02);border-bottom:1px solid rgba(255,255,255,.04)}
+  .brand{display:flex;gap:10px;align-items:center}
+  .logo{width:42px;height:42px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:white;font-weight:900; overflow: hidden;}
+  .logo img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  main{flex:1;overflow:auto;padding:16px;-webkit-overflow-scrolling:touch}
+
+  .inline-toast{
+    position:fixed;
+    left:50%;
+    bottom:24px;
+    padding:10px 14px;
+    border-radius:999px;
+    background:rgba(15,23,42,0.9);
+    color:#f9fafb;
+    font-size:13px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    box-shadow:0 10px 25px rgba(15,23,42,0.35);
+    opacity:0;
+    transform:translate(-50%,10px);
+    pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+    z-index:120;
+  }
+  .inline-toast.visible{
+    opacity:1;
+    transform:translate(-50%,0);
+  }
+
+  /* --- Hero & KPI Styles --- */
+  .welcome-card {    
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    padding: 16px;
+    z-index: 1;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: background-image 0.4s ease; /* Transition for theme change */
+  }
+  .welcome-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 85%, black));
+    z-index: -1;
+    transition: background 0.4s ease; /* Smooth transition for the gradient */
+  }
+
+  .card.date-card {
+    color: white;
+    background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 85%, black));
+    transition: background 0.4s ease; /* Smooth transition for theme change */
+  }
+  body.dark .card.date-card {
+    /* Dark mode */
+    background: linear-gradient(135deg, #4f46e5, #3730a3);
+  }
+  .date-card .icon {
+    background: rgba(255,255,255,0.15) !important;
+  }
+  .grid-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}
+  /* Center content on wider screens */
+  .view-container { max-width: 1200px; margin: 0 auto; width: 100%; }
+  
+  .card{
+    background:var(--card); border-radius:16px; padding:16px; display:flex; flex-direction:column;
+    align-items:center; text-align:center; gap:8px; box-shadow:0 4px 20px rgba(2,6,23,.04);
+    border: 1px solid var(--border-color); cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(2,6,23,.07);
+  }
+  .card .icon{
+    width:60px; height:60px; border-radius:16px; display:flex; align-items:center;
+    justify-content:center; color:white; font-size:24px; margin-bottom: 4px;
+  }
+
+  .btn{background:var(--accent);color:white;padding:6px 10px;border-radius:8px;font-weight:700; border:none; cursor:pointer; font-size: 13px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px;}
+  .btn.icon-btn { width: 40px; height: 40px; border-radius: 50%; padding: 0; font-size: 18px; flex-shrink: 0; }
+  .btn.ghost{background:transparent;border:1px solid var(--border-color);color:var(--text-primary)}
+
+  /* --- Attendance Calendar --- */
+  .att-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:0 auto 10px; max-width:520px; }
+  .att-box { background:var(--card); border:1px solid var(--border-color); border-radius:12px; padding:8px; text-align:center; box-shadow:0 4px 16px rgba(2,6,23,.04); }
+  .att-box .lbl { font-size:12px; color:var(--muted); margin-bottom:6px; }
+  .att-box .val { font-weight:900; font-size:14px; }
+  .att-card { background:var(--card); border:1px solid var(--border-color); border-radius:14px; padding:10px; box-shadow:0 4px 20px rgba(2,6,23,.04); max-width:520px; margin:0 auto; }
+  .att-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .att-month { font-weight:800; font-size:14px; }
+  .att-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; padding:6px; border:1px solid var(--border-color); border-radius:10px; }
+  .att-weekday { text-align:center; font-size:11px; color:var(--muted); padding:4px 0; }
+  .att-day { aspect-ratio:1/1; min-height:34px; border:1px solid var(--border-color); border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px; cursor:pointer; user-select:none; background:var(--card); transition:transform .08s ease, box-shadow .18s ease; }
+  .att-day:hover { transform: translateY(-1px); box-shadow:0 6px 16px rgba(2,6,23,.06); }
+  .att-day.muted { opacity:.45; }
+  .att-day.present { background: color-mix(in srgb, #16a34a 12%, transparent); border-color:#16a34a; color:#14532d; }
+  body.dark .att-day.present { color:#dcfce7; }
+  .att-day.absent { background: color-mix(in srgb, #ef4444 12%, transparent); border-color:#ef4444; color:#7f1d1d; }
+  body.dark .att-day.absent { color:#fee2e2; }
+  .att-day.today { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent) inset; }
+  .att-actions { display:flex; gap:10px; margin-top:10px; }
+  .att-actions .btn { flex:1; font-weight:800; }
+  .activity-list { margin-top:14px; }
+  /* Responsive tweaks for phones */
+  @media (max-width: 420px){
+    .att-card{ padding:8px; border-radius:12px; }
+    .att-summary{ gap:6px; }
+    .att-box{ padding:6px; }
+    .att-box .val{ font-size:13px; }
+    .att-grid{ gap:2px; padding:4px; border-radius:8px; }
+    .att-weekday{ font-size:10px; padding:3px 0; }
+    .att-day{ min-height:28px; font-size:11px; border-radius:6px; }
+    .att-actions{ gap:8px; }
+    .activity-item{ padding:10px; }
+    .activity-icon{ width:36px; height:36px; font-size:16px; }
+  }
+  /* Larger desktop screens */
+  @media (min-width: 1024px){
+    .att-card{ max-width:640px; }
+    .att-summary{ max-width:640px; }
+    .att-month{ font-size:15px; }
+    .att-day{ min-height:38px; font-size:13px; }
+  }
+  .activity-item { display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--border-color); border-radius:12px; background:var(--card); box-shadow:0 4px 18px rgba(2,6,23,.05); }
+  .activity-main { flex:1; display:flex; align-items:center; gap:12px; }
+  .activity-icon { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:18px; box-shadow:0 6px 16px rgba(2,6,23,.15); }
+  .activity-title { font-weight:900; }
+  .activity-meta { font-size:12px; color:var(--muted); }
+  .status-chip { font-size:11px; font-weight:800; padding:6px 10px; border-radius:999px; border:1px solid var(--border-color); background:var(--card); color:var(--text-primary); }
+
+  /* --- Navigation Styles (Mobile First) --- */
+  .main-nav {
+    position: fixed;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 30px);
+    max-width: 450px;
+    height: 60px;
+    background-color: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 100;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  body.dark .main-nav {
+    background: rgba(40, 40, 60, 0.65);
+  }
+  .nav-indicator {
+    position: absolute;
+    background-color: var(--accent);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(255, 108, 0, 0.4);
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1), background-color 0.3s ease;
+    z-index: -1;
+    border: none;
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--muted); text-decoration: none;
+    position: relative; height: 100%; z-index: 2;
+    min-width: 70px; flex-grow: 1; transition: color 0.3s ease;
+  }
+  .nav-brand { display: none; } /* Hide brand logo in nav on mobile */
+  .nav-item span { display: none; } /* Hide text on mobile */
+  .nav-item.active i {
+    color: white;
+    transform: scale(1.1);
+  }
+  .nav-item:not(.active):hover { color: var(--accent); }
+  .nav-item i { font-size: 20px; transition: transform 0.3s ease, color 0.3s ease; }
+
+  .view-container { animation: fadeIn .4s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* --- Desktop & Tablet Styles --- */
+  @media (min-width: 768px) {
+    .app-layout {
+      flex-direction: row;
+    }
+    .app {
+      padding-bottom: 0; /* Remove bottom padding on desktop */
+      flex-grow: 1;
+    }
+    html[dir="ltr"] .app { margin-left: 240px; }
+    html[dir="rtl"] .app { margin-right: 240px; }
+
+    .content-fade { display: none; }
+    header.app-header { display: flex; } /* Show mobile header on desktop */
+
+    .main-nav {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: auto; /* Reset mobile positioning */
+      right: auto;
+      transform: translateX(0);
+      width: 240px;
+      height: 100%;
+      max-width: none;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      border-radius: 0;
+      padding: 12px;
+      gap: 8px;
+      background-color: var(--card);
+      border-right: 1px solid var(--border-color);
+      box-shadow: none;
+    }
+    html[dir="ltr"] .main-nav { left: 0; border-right: 1px solid var(--border-color); border-left: none; }
+    html[dir="rtl"] .main-nav { right: 0; border-left: 1px solid var(--border-color); border-right: none; }
+    body.dark .main-nav { background: var(--bg); }
+
+    .nav-brand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 0 20px;
+      margin-bottom: 8px;
+    }
+    /* Professional badge under the logo */
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-primary);
+      background: linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,.55));
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      box-shadow: 0 4px 12px rgba(2,6,23,.06);
+      backdrop-filter: blur(6px);
+    }
+    body.dark .brand-badge {
+      background: rgba(255,255,255,0.06);
+      box-shadow: 0 6px 16px rgba(2,6,23,.35);
+    }
+    .brand-badge i { color: var(--accent); font-size: 12px; }
+
+    .nav-item {
+      flex-direction: row;
+      justify-content: flex-start;
+      gap: 16px;
+      height: auto;
+      min-width: auto;
+      flex-grow: 0;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .nav-item span { display: inline; font-weight: 700; }
+    .nav-item i { font-size: 18px; width: 20px; text-align: center; }
+    .nav-item.active i { color: white; transform: none; }
+    .nav-item.active { color: white; }
+
+    .nav-indicator {
+      box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+
+    /* Desktop/tablet tweaks */
+    .grid-cards { grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .card .icon { width:64px; height:64px; font-size:26px; }
+    .card { padding:18px; }
+  }
+  .card.has-indicator{ position:relative; }
+  .card-indicator{
+    position:absolute;
+    top:10px;
+    inset-inline-end:12px;
+    width:12px; height:12px;
+    border-radius:999px;
+    background:#ef4444;
+    box-shadow:0 0 0 4px rgba(239,68,68,0.15);
+    opacity:0;
+    transform:scale(0.4);
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  .card-indicator.visible{
+    opacity:1;
+    transform:scale(1);
+  }
+  .icon-btn{
+    position:relative;
+  }
+  .icon-dot{
+    position:absolute;
+    top:6px;
+    inset-inline-end:6px;
+    width:9px;
+    height:9px;
+    border-radius:999px;
+    background:#ef4444;
+    box-shadow:0 0 0 3px rgba(239,68,68,0.18);
+    opacity:0;
+    transform:scale(.4);
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  .icon-dot.visible{
+    opacity:1;
+    transform:scale(1);
+  }
+  @media (min-width: 1024px) {
+    .grid-cards { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .welcome-card { padding: 20px; }
+
+    .sidebar-footer {
+        display: block;
+        margin-top: auto;
+        padding: 16px 12px;
+        text-align: center;
+        font-size: 12px;
+        color: var(--muted);
+        border-top: 1px solid var(--border-color);
+    }
+  }
+
+  /* --- Modal Styles --- */
+  .modal-container {
+    position: fixed; inset: 0; z-index: 110;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+    visibility: hidden; opacity: 0;
+    transition: visibility 0s .3s, opacity .3s ease;
+  }
+  .modal-container.visible { visibility: visible; opacity: 1; transition: visibility 0s, opacity .3s ease; }
+  .modal-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+  }
+  .modal-content {
+    position: relative; z-index: 101;
+    background: var(--card);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    transform: translateY(20px);
+    transition: transform .3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    overflow: hidden; /* Prevent inner elements from visually spilling out */
+  }
+  .modal-container.visible .modal-content { transform: translateY(0); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border-color); }
+  .modal-header h3 { margin: 0; font-size: 18px; }
+  .modal-header .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--muted); padding: 0 8px; }
+  .modal-body { padding: 20px; text-align: center; }
+  .modal-body .icon { font-size: 48px; color: var(--accent); margin-bottom: 16px; }
+  .modal-body p { margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: var(--muted); }
+  .modal-footer { display: flex; gap: 10px; justify-content: center; padding: 0 20px 20px; }
+  .modal-footer .btn { flex: 1; padding: 10px; }
+
+  /* Ensure inputs inside modals never exceed modal width */
+  .modal-body input,
+  .modal-body textarea {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--card);
+    color: var(--text-primary);
+  }
+  .modal-body textarea { resize: vertical; }
+  /* Polished inputs with icons */
+  .input-wrap{ position: relative; display: flex; align-items: center; }
+  .input-wrap input, .input-wrap textarea{
+    padding: 12px 40px 12px 40px; /* room for icons */
+    border-radius: 12px; box-shadow: 0 2px 10px rgba(2,6,23,.04);
+  }
+  html[dir="rtl"] .input-wrap input, html[dir="rtl"] .input-wrap textarea{ padding: 12px 40px 12px 40px; }
+  .input-icon-left, .input-icon-right{
+    position: absolute; font-size: 16px; color: var(--muted);
+    opacity: .9;
+  }
+  html[dir="rtl"] .input-icon-left{ right: 12px; }
+  html[dir="rtl"] .input-icon-right{ left: 12px; }
+  html[dir="ltr"] .input-icon-left{ left: 12px; }
+  html[dir="ltr"] .input-icon-right{ right: 12px; }
+  .modal-footer .btn.primary-wide{ width: 100%; border-radius: 12px; padding: 12px; font-weight: 800; }
+  /* --- Request Type Cards (modal) --- */
+  .type-option{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:5px; padding:8px; border-radius:10px; width:100%; height:70px;
+    background: var(--card);
+    border:1px solid var(--border-color);
+    color: var(--text-primary);
+    box-shadow: 0 2px 10px rgba(2,6,23,.04);
+    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease, transform .08s ease;
+  }
+  .type-option i{ font-size:18px; color: var(--muted); }
+  .type-option span{ font-weight:800; font-size:12px; }
+
+  /* --- Saved Requests cards --- */
+  .requests-feed{display:flex; flex-direction:column; gap:14px;}
+  .request-card{
+    cursor: pointer;
+    align-items: flex-start;
+    text-align: inherit;
+    gap: 10px;
+    border:1px solid rgba(15,23,42,.06);
+    position:relative;
+    overflow:hidden;
+  }
+  .request-card::after{
+    content:'';
+    position:absolute;
+    inset:auto 12px 0;
+    height:2px;
+    background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    opacity:.25;
+  }
+  .request-card:hover{ box-shadow: 0 12px 30px rgba(2,6,23,.10); transform: translateY(-2px); }
+  body.dark .request-card{ border-color: rgba(255,255,255,.08); }
+  .request-card .rc-header{ display:flex; justify-content:space-between; align-items:flex-start; width:100%; gap:12px; }
+  .request-card .rc-title{ display:flex; align-items:center; gap:12px; font-weight:800; }
+  .request-card .rc-icon{ width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:18px; box-shadow:0 10px 18px rgba(0,0,0,.12); }
+  .request-card .rc-meta{ font-size:13px; color:var(--muted); }
+  .request-card .rc-body{ width:100%; display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+  .request-card .rc-row{ display:flex; gap:6px; flex-wrap:wrap; font-size:13px; color:var(--muted); }
+  .request-card .rc-row span{ padding:4px 10px; border-radius:999px; background:rgba(15,118,110,.08); color:var(--text-primary); font-weight:700; font-size:12px; }
+  .request-card .rc-notes{ font-size:13px; color:var(--text-primary); background:rgba(15,118,110,.04); padding:10px 12px; border-radius:12px; line-height:1.6; }
+  body.dark .request-card .rc-notes{ background:rgba(255,255,255,.05); }
+  .request-card .rc-footer{ width:100%; margin-top:10px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+  .request-card .rc-status-chip{
+    padding:6px 14px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:800;
+    letter-spacing:.2px;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+  .request-card .rc-status-chip i{ font-size:13px; }
+  .request-card .rc-timeline{
+    font-size:12px;
+    color:var(--muted);
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .request-card .rc-actions{ display:flex; align-items:center; gap:10px; }
+  .messages-feed{display:flex; flex-direction:column; gap:14px;}
+  .message-card{
+    border:1px solid rgba(15,23,42,.08);
+    border-radius:16px;
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    background:var(--card);
+  }
+  body.dark .message-card{border-color:rgba(255,255,255,.08);}
+  .message-card .message-chip{
+    align-self:flex-start;
+    padding:4px 12px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:700;
+    background:rgba(59,130,246,.15);
+    color:#1d4ed8;
+  }
+  .message-card .message-body{font-size:14px; line-height:1.7;}
+  .message-card .message-meta{font-size:12px; color:var(--muted); display:flex; gap:12px; flex-wrap:wrap;}
+  .message-card .message-reply{
+    background:rgba(34,197,94,.12);
+    border-radius:12px;
+    padding:10px 12px;
+    font-size:13px;
+  }
+  .message-card .message-actions{display:flex; justify-content:flex-end;}
+  .type-option:hover{ border-color: color-mix(in srgb, var(--accent) 60%, transparent); box-shadow: 0 6px 18px rgba(2,6,23,.08); transform: translateY(-1px); }
+  /* Selected state similar to screenshot: subtle green emphasis */
+  .type-option.active{
+    border-color: #16a34a; /* emerald-600 */
+    background: color-mix(in srgb, #16a34a 7%, transparent);
+    box-shadow: 0 0 0 2px rgba(22,163,74,.14) inset, 0 4px 14px rgba(22,163,74,.10);
+  }
+  body.dark .type-option.active{
+    background: color-mix(in srgb, #22c55e 10%, transparent);
+    border-color: #22c55e;
+    box-shadow: 0 0 0 2px rgba(34,197,94,.18) inset, 0 6px 18px rgba(34,197,94,.12);
+  }
+
+</style>
+<body>
+<body>
+
+  <!-- Splash Screen -->
+  <div id="splash" class="splash" role="dialog" aria-hidden="false">
+    <div class="splash-blobs" aria-hidden="true">
+      <div class="blob b1"></div>
+      <div class="blob b2"></div>
+    </div>
+    <div class="splash-content">
+      <div class="splash-card" role="region" aria-labelledby="splashTitle">
+        <div class="splash-logo-wrap">
+          <img src="images/logo.png" alt="Nedjma Worker Logo">
+        </div>
+        <h1 id="splashTitle" class="splash-title" data-lang-key="appNameWorker">Nedjma Worker</h1>
+        <p class="splash-tagline" data-lang-key="appSloganWorker">بوابتك لإدارة مهامك اليومية</p>
+        <div class="splash-badge">By Labo Nedjma</div>
+        <div class="splash-footer">
+          <div class="loading-status">
+            <span data-lang-key="splashPreparing">يتم تحميل البيانات</span>
+            <span id="splashProgressValue">0%</span>
+          </div>
+          <div class="loading-bar" aria-hidden="true"><span class="loading-fill" id="splashProgressFill"></span></div>
+          <div style="font-size:12px; color:rgba(248,250,252,0.75);" data-lang-key="splashTip"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main application wrapper for layout -->
+  <div class="app-layout" id="appLayout">
+    
+    <!-- Main Content Area -->
+    <div class="app" id="app">
+        <!-- Header for mobile view only -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="logo" style="width:40px; height:40px; background: transparent;">
+                  <img src="images/logo.png" alt="Nedjma Worker Logo">
+                </div>
+                <div>
+                <div style="font-weight:800" data-lang-key="appNameWorker">Nedjma Worker</div>
+                <div id="headerSubtitle" style="font-size:13px;color:var(--muted)" data-lang-key="home">الواجهة الرئيسية</div>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button id="workerMessagesBtn" class="btn icon-btn ghost" title="الرسائل">
+                    <span class="icon-dot" id="workerMessagesDot"></span>
+                    <i class="fas fa-envelope"></i>
+                </button>
+                <button id="themeToggleHeader" class="btn icon-btn ghost" title="تبديل الوضع">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button id="userProfileBtn" class="btn icon-btn ghost" title="الحساب">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+            </div>
+        </header>
+
+        <main id="mainContent">
+          <!-- Content will be injected here -->
+        </main>
+
+        <!-- Fading overlay for content scrolling under the nav bar -->
+        <div class="content-fade"></div>
+    </div>
+
+    <!-- Navigation (bottom bar on mobile, sidebar on desktop) -->
+    <nav class="main-nav" id="mainNav">
+        <div class="nav-indicator"></div>
+        <!-- Brand logo for sidebar view -->
+        <div class="nav-brand">
+            <div class="logo" style="width:48px;height:48px;border-radius:12px; background: transparent;">
+              <img src="images/logo.png" alt="Nedjma Worker Logo">
+            </div>
+            <div style="font-size: 12px; color: var(--muted); margin-top: 8px;">
+              <span class="brand-badge"><i class="fas fa-id-badge"></i><span data-lang-key="sidebarTaglineWorker">تطبيق العامل</span></span>
+            </div>
+        </div>
+        <!-- Nav items -->
+        <div class="nav-item active" data-view="home">
+            <i class="fas fa-home"></i>
+            <span data-lang-key="home">الرئيسية</span>
+        </div>
+        <div class="nav-item" data-view="worker_profile">
+            <i class="fas fa-user"></i>
+            <span data-lang-key="workerCard4">ملفي الشخصي</span>
+        </div>
+        <div class="nav-item" data-view="info">
+            <i class="fas fa-address-card"></i>
+            <span data-lang-key="about">حول</span>
+        </div>
+        <div class="nav-item" data-view="settings">
+            <i class="fas fa-sliders-h"></i>
+            <span data-lang-key="settings">الاعدادات</span>
+        </div>
+        <div class="sidebar-footer" style="display: none;">
+            <span data-lang-key="sidebarTaglineWorker">تطبيق العامل</span>
+        </div>
+    </nav>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal-container">
+        <div class="modal-backdrop" data-action="close-modal"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="confirmModalTitle" data-lang-key="confirmAction">تأكيد الإجراء</h3>
+                <button class="close-btn" data-action="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="icon"><i class="fas fa-language"></i></div>
+                <p id="confirmModalMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button id="confirmModalCancelBtn" class="btn ghost" data-action="close-modal" data-lang-key="cancel">إلغاء</button>
+                <button id="confirmModalConfirmBtn" class="btn" data-lang-key="confirm">تأكيد</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Modal -->
+    <div id="accountModal" class="modal-container" aria-hidden="true">
+      <div class="modal-backdrop" data-action="close-account-modal"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="accountTitle" style="margin:0;">الحساب</h3>
+          <button class="close-btn" data-action="close-account-modal">&times;</button>
+        </div>
+        <div class="modal-body" style="text-align:right;">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+            <div style="width:52px; height:52px; border-radius:999px; background:linear-gradient(135deg,#0f766e,#14b8a6); display:flex; align-items:center; justify-content:center; color:#fff; font-size:24px; box-shadow:0 10px 22px rgba(15,118,110,.35);">
+              <i class="fas fa-user"></i>
+            </div>
+            <div>
+              <div id="accountName" style="margin:0; font-weight:800; font-size:16px;"></div>
+              <div id="accountState" style="margin-top:4px; font-size:13px; color:var(--muted);"></div>
+            </div>
+          </div>
+          <p id="accountWelcome" style="margin:4px 0 10px; font-size:13px; color:var(--muted);"></p>
+          <p id="accountEmailLabel" style="display:none; margin:0;"></p>
+          <p id="accountEmail" style="display:none; margin:0;"></p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn ghost" id="accountLoginBtn">تسجيل الدخول</button>
+          <button class="btn" id="accountLogoutBtn" style="background:#ef4444;">
+            <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Worker Reply Modal -->
+    <div id="workerReplyModal" class="modal-container" aria-hidden="true">
+      <div class="modal-backdrop" data-action="close-worker-reply"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 style="margin:0;">رد على الرسالة</h3>
+          <button class="close-btn" data-action="close-worker-reply">&times;</button>
+        </div>
+        <div class="modal-body" style="text-align:right;">
+          <textarea id="workerReplyText" style="width:100%; min-height:140px; padding:12px; border-radius:12px; border:1px solid var(--border-color); background:var(--card); color:var(--text-primary);" placeholder="أدخل ردك على رسالة الإدارة..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn ghost" data-action="close-worker-reply" data-lang-key="cancel">إلغاء</button>
+          <button id="workerReplySubmit" class="btn">إرسال الرد</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Search Modal -->
+    <div id="workerSearchModal" class="modal-container" aria-hidden="true">
+      <div class="modal-backdrop" data-action="close-worker-search"></div>
+      <div class="modal-content" style="max-width:480px;">
+        <div class="modal-header">
+          <h3 style="margin:0;">بحث في التطبيق</h3>
+          <button class="close-btn" data-action="close-worker-search">&times;</button>
+        </div>
+        <div class="modal-body" style="text-align:right; display:flex; flex-direction:column; gap:10px;">
+          <p style="margin:0; font-size:13px; color:var(--muted);">
+            اكتب كلمة للبحث في طلباتك ورسائلك. سيتم عرض أول النتائج المطابقة فقط.
+          </p>
+          <input id="workerSearchInput" type="text" placeholder="مثال: غياب، عطلة، رسالة..." style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--border-color); background:var(--card); color:var(--text-primary); box-sizing:border-box;" />
+          <div id="workerSearchResults" style="max-height:260px; overflow:auto; border-radius:12px; border:1px solid var(--border-color); padding:10px; font-size:13px; color:var(--muted);">
+            ابدأ بالكتابة ثم اضغط زر البحث.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="workerSearchCloseBtn" class="btn ghost" data-action="close-worker-search">إغلاق</button>
+          <button id="workerSearchSubmit" class="btn">بحث</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+  import { getFirestore, collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp, orderBy, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCDc2W1XbKMb9jWMGkoXjNZW0hjNXLF5wk",
+    authDomain: "nedjma-connect.firebaseapp.com",
+    projectId: "nedjma-connect",
+    storageBucket: "nedjma-connect.firebasestorage.app",
+    messagingSenderId: "972148279074",
+    appId: "1:972148279074:web:c7c4a2ebe64a497d6fc77b",
+    measurementId: "G-KEV2FMTL7B"
+  };
+
+  const firebaseApp = initializeApp(firebaseConfig);
+  const firestore = getFirestore(firebaseApp);
+  const workersCollection = collection(firestore, 'workers');
+  const requestsCollection = collection(firestore, 'requests');
+  const messagesCollection = collection(firestore, 'messages');
+
+  function generatePin() {
+    return String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+  }
+
+  async function sha256Hex(input) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function showWorkerToast(msg) {
+    let el = document.getElementById('inlineToast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'inlineToast';
+      el.className = 'inline-toast';
+      el.innerHTML = '<i class="fas fa-check-circle"></i><span></span>';
+      document.body.appendChild(el);
+    }
+    const span = el.querySelector('span');
+    if (span) span.textContent = msg || (currentLang==='ar'?'تم تحديث البيانات.':'Data refreshed.');
+    el.classList.add('visible');
+    clearTimeout(el._hideTimer);
+    el._hideTimer = setTimeout(()=> el.classList.remove('visible'), 2200);
+  }
+
+  async function loginWithPin(pin) {
+    const hashed = await sha256Hex(pin);
+    const q = query(workersCollection, where('pinHash', '==', hashed));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      throw new Error('NOT_FOUND');
+    }
+    const doc = snapshot.docs[0];
+    return { id: doc.id, ...doc.data() };
+  }
+
+  async function fetchWorkerRequests(workerId) {
+    if (!workerId) return [];
+    try {
+      const q = query(requestsCollection, where('workerId', '==', workerId));
+      const snapshot = await getDocs(q);
+      const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      // ترتيب محلي حسب createdAt (الأحدث أولاً)
+      return items.sort((a,b) => {
+        const ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+        const tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+        return tb - ta;
+      });
+    } catch (err) {
+      console.error('Failed to load requests', err);
+      return [];
+    }
+  }
+
+  async function fetchWorkerMessages(workerId) {
+    if (!workerId) return [];
+    try {
+      const q = query(messagesCollection, where('workerId', '==', workerId));
+      const snapshot = await getDocs(q);
+      return snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a,b)=>{
+          const ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+          const tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+          return tb - ta;
+        });
+    } catch (err) {
+      console.error('Failed to load worker messages', err);
+      return [];
+    }
+  }
+
+  async function markMessagesAsRead(ids = []) {
+    if (!ids.length) return;
+    await Promise.all(ids.map(id => updateDoc(doc(firestore, 'messages', id), {
+      readByWorker: true,
+      workerSeenAt: serverTimestamp()
+    }).catch(() => {})));
+  }
+
+  async function sendWorkerReply(messageId, reply) {
+    try {
+      await updateDoc(doc(firestore, 'messages', messageId), {
+        workerReply: reply,
+        workerReplyAt: serverTimestamp(),
+        workerReplySeen: false,
+        readByWorker: true,
+        updatedAt: serverTimestamp()
+      });
+      return true;
+    } catch (err) {
+      console.error('Failed to send worker reply', err);
+      return false;
+    }
+  }
+
+  async function submitWorkerRequest(payload) {
+    try {
+      let managerEmail = '';
+      try {
+        const raw = localStorage.getItem('nedjmaWorker') || '{}';
+        const info = JSON.parse(raw);
+        managerEmail = info && info.managerEmail || '';
+      } catch (_) {
+        managerEmail = '';
+      }
+      if (!managerEmail && payload && payload.workerId) {
+        try {
+          const snap = await getDoc(doc(firestore, 'workers', payload.workerId));
+          if (snap.exists()) {
+            const data = snap.data() || {};
+            managerEmail = data.managerEmail || '';
+            try {
+              const raw = localStorage.getItem('nedjmaWorker') || '{}';
+              const info = JSON.parse(raw);
+              const next = { ...(info||{}), managerEmail };
+              localStorage.setItem('nedjmaWorker', JSON.stringify(next));
+            } catch (_) {}
+          }
+        } catch (_) {
+          managerEmail = managerEmail || '';
+        }
+      }
+      await addDoc(requestsCollection, {
+        ...payload,
+        ...(managerEmail ? { managerEmail } : {}),
+        createdAt: serverTimestamp()
+      });
+      return true;
+    } catch (err) {
+      console.error('Failed to submit request', err);
+      return false;
+    }
+  }
+
+  async function deleteWorkerRequest(id) {
+    try {
+      await deleteDoc(doc(firestore, 'requests', id));
+      return true;
+    } catch (err) {
+      console.error('Failed to delete request', err);
+      return false;
+    }
+  }
+
+  async function deleteWorkerMessage(id) {
+    try {
+      await deleteDoc(doc(firestore, 'messages', id));
+      return true;
+    } catch (err) {
+      console.error('Failed to delete message', err);
+      return false;
+    }
+  }
+
+  async function reloadWorkerFromFirestore(workerInfo) {
+    if (!workerInfo || !workerInfo.id) return null;
+    try {
+      const snap = await getDoc(doc(firestore, 'workers', workerInfo.id));
+      if (!snap.exists()) return null;
+      const data = snap.data();
+      return {
+        ...workerInfo,
+        firstName: data.firstName || workerInfo.firstName || '',
+        lastName: data.lastName || workerInfo.lastName || '',
+        phone: data.phone || workerInfo.phone || '',
+        department: data.department || workerInfo.department || '',
+        status: data.status || workerInfo.status || 'statusActive',
+        managerEmail: data.managerEmail || workerInfo.managerEmail || ''
+      };
+    } catch (e) {
+      console.error('Failed to reload worker from Firestore', e);
+      return null;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const splash = document.getElementById('splash');
+    const splashFill = document.getElementById('splashProgressFill');
+    const splashValue = document.getElementById('splashProgressValue');
+    const app = document.getElementById('app');
+    const appLayout = document.getElementById('appLayout');
+    const mainContent = document.getElementById('mainContent');
+    const userProfileBtn = document.getElementById('userProfileBtn');
+    const workerMessagesBtn = document.getElementById('workerMessagesBtn');
+    const headerSubtitle = document.getElementById('headerSubtitle');
+    const workerSearchModal = document.getElementById('workerSearchModal');
+    const workerSearchInput = document.getElementById('workerSearchInput');
+    const workerSearchResults = document.getElementById('workerSearchResults');
+    const workerSearchSubmit = document.getElementById('workerSearchSubmit');
+    const workerSearchCloseBtn = document.getElementById('workerSearchCloseBtn');
+
+    // --- Theme Definitions (Copied from main app) ---
+    const themes = {
+      'default-light': { nameKey: 'themeDefaultLight', type: 'light', colors: {
+        '--primary': '#0f766e', '--accent': '#ff6c00', '--bg': '#f0f2f5', '--card': '#ffffff',
+        '--muted': '#6b7280', '--border-color': '#e5e7eb', '--text-primary': '#1f2937'
+      }},
+      'ocean-light': { nameKey: 'themeOceanLight', type: 'light', colors: {
+        '--primary': '#3b82f6', '--accent': '#0ea5e9', '--bg': '#e0f2fe', '--card': '#ffffff',
+        '--muted': '#6b7280', '--border-color': '#e5e7eb', '--text-primary': '#1f2937'
+      }},
+      'forest-light': { nameKey: 'themeForestLight', type: 'light', colors: {
+        '--primary': '#16a34a', '--accent': '#d97706', '--bg': '#f0fdf4', '--card': '#ffffff',
+        '--muted': '#6b7280', '--border-color': '#e5e7eb', '--text-primary': '#1f2937'
+      }},
+      'sunset-light': { nameKey: 'themeSunsetLight', type: 'light', colors: {
+        '--primary': '#f97316', '--accent': '#7c3aed', '--bg': '#fff7ed', '--card': '#ffffff',
+        '--muted': '#6b7280', '--border-color': '#e5e7eb', '--text-primary': '#1f2937'
+      }},
+      'neutral-light': { nameKey: 'themeNeutralLight', type: 'light', colors: {
+        '--primary': '#475569', '--accent': '#0f766e', '--bg': '#f1f5f9', '--card': '#ffffff',
+        '--muted': '#6b7280', '--border-color': '#e5e7eb', '--text-primary': '#1f2937'
+      }},
+      'rose-light': { nameKey: 'themeRoseLight', type: 'light', colors: {
+        '--primary': '#e11d48', '--accent': '#f43f5e', '--bg': '#fff1f2', '--card': '#ffffff',
+        '--muted': '#6b7280', '--border-color': '#e5e7eb', '--text-primary': '#1f2937'
+      }},
+      'indigo-light': { nameKey: 'themeIndigoLight', type: 'light', colors: {
+        '--primary': '#4f46e5', '--accent': '#6366f1', '--bg': '#eef2ff', '--card': '#ffffff',
+        '--muted': '#6b7280', '--border-color': '#e5e7eb', '--text-primary': '#1f2937'
+      }},
+      'mint-light': { nameKey: 'themeMintLight', type: 'light', colors: {
+        '--primary': '#10b981', '--accent': '#0ea5e9', '--bg': '#ecfdf5', '--card': '#ffffff',
+        '--muted': '#6b7280', '--border-color': '#e5e7eb', '--text-primary': '#1f2937'
+      }},
+      'sky-light': { nameKey: 'themeSkyLight', type: 'light', colors: {
+        '--primary': '#0ea5e9', '--accent': '#3b82f6', '--bg': '#f0f9ff', '--card': '#ffffff',
+        '--muted': '#6b7280', '--border-color': '#e5e7eb', '--text-primary': '#1f2937'
+      }},
+      'lavender-light': { nameKey: 'themeLavenderLight', type: 'light', colors: {
+        '--primary': '#8b5cf6', '--accent': '#ec4899', '--bg': '#f5f3ff', '--card': '#ffffff',
+        '--muted': '#6b7280', '--border-color': '#e5e7eb', '--text-primary': '#1f2937'
+      }},
+      'default-dark': { nameKey: 'themeDefaultDark', type: 'dark', colors: {
+        '--primary': '#ff6c00', '--accent': '#ff6c00', '--bg': '#1e1e2d', '--card': '#27293d',
+        '--muted': '#adb5bd', '--border-color': 'rgba(255, 255, 255, 0.1)', '--text-primary': '#f1f5f9'
+      }},
+    };
+
+    let currentTheme = localStorage.getItem('app-theme') || 'default-light';
+    let currentLang = localStorage.getItem('app-lang') || 'ar';
+    window.currentLang = currentLang;
+    let currentWorker = null;
+    try {
+      const storedWorker = localStorage.getItem('nedjmaWorker');
+      if (storedWorker) currentWorker = JSON.parse(storedWorker);
+    } catch (_) { currentWorker = null; }
+    let currentView = 'home';
+    const WORKER_DECISION_SEEN_KEY = 'workerRequestsDecisionSeenAt';
+    const WORKER_STATUS_ACK_KEY = 'workerStatusSeenValue';
+    let workerRequestAlert = false;
+    let workerStatusAlert = false;
+    let workerMessageAlert = false;
+    let workerRequestsRefreshPromise = null;
+    let workerStatusSyncPromise = null;
+    let workerMessagesRefreshPromise = null;
+    let workerMessagesCache = [];
+    let workerShowAllMessages = false;
+    let workerReplyMessageId = null;
+    let cachedRequests = [];
+    const statusMap = {
+      pending: { ar: 'قيد المراجعة', en: 'Pending', bg: 'rgba(251,191,36,0.12)', color: '#b45309' },
+      approved: { ar: 'مقبول', en: 'Approved', bg: 'rgba(34,197,94,0.12)', color: '#15803d' },
+      rejected: { ar: 'مرفوض', en: 'Rejected', bg: 'rgba(239,68,68,0.12)', color: '#b91c1c' }
+    };
+
+    const computeTimestamp = (value) => {
+      if (!value) return 0;
+      if (typeof value.toMillis === 'function') return value.toMillis();
+      if (value instanceof Date) return value.getTime();
+      if (typeof value === 'number') return value;
+      if (typeof value === 'string') {
+        const parsed = Date.parse(value);
+        return isNaN(parsed) ? 0 : parsed;
+      }
+      return 0;
+    };
+
+    const formatDateTime = (value) => {
+      if (!value) return '';
+      const dateObj = value.toDate ? value.toDate() : (value instanceof Date ? value : new Date(value));
+      if (!(dateObj instanceof Date) || isNaN(dateObj)) return '';
+      try {
+        return dateObj.toLocaleString(currentLang === 'ar' ? 'ar-DZ' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' });
+      } catch (_) {
+        return dateObj.toISOString();
+      }
+    };
+
+    const applyWorkerIndicators = () => {
+      const reqDot = document.getElementById('workerRequestsIndicator');
+      if (reqDot) reqDot.classList.toggle('visible', !!workerRequestAlert);
+      const profileDot = document.getElementById('workerProfileIndicator');
+      if (profileDot) profileDot.classList.toggle('visible', !!workerStatusAlert);
+      const msgDot = document.getElementById('workerMessagesDot');
+      if (msgDot) msgDot.classList.toggle('visible', !!workerMessageAlert);
+    };
+
+    const evaluateWorkerStatusAlert = () => {
+      if (!currentWorker) {
+        workerStatusAlert = false;
+        applyWorkerIndicators();
+        return;
+      }
+      const latestStatus = currentWorker.status || 'statusActive';
+      if (!localStorage.getItem(WORKER_STATUS_ACK_KEY)) {
+        try { localStorage.setItem(WORKER_STATUS_ACK_KEY, latestStatus); } catch (_) {}
+        workerStatusAlert = false;
+      } else {
+        const seenStatus = localStorage.getItem(WORKER_STATUS_ACK_KEY) || '';
+        workerStatusAlert = seenStatus !== latestStatus;
+      }
+      applyWorkerIndicators();
+    };
+
+    const acknowledgeWorkerStatus = () => {
+      if (!currentWorker) return;
+      try { localStorage.setItem(WORKER_STATUS_ACK_KEY, currentWorker.status || 'statusActive'); } catch (_) {}
+      workerStatusAlert = false;
+      applyWorkerIndicators();
+    };
+
+    const evaluateWorkerRequestAlerts = (items, { markSeen = false } = {}) => {
+      const list = Array.isArray(items) ? items : [];
+      const latestDecisionTs = list.reduce((max, it) => {
+        if (it.status && it.status !== 'pending') {
+          const ts = computeTimestamp(it.decidedAt) || computeTimestamp(it.updatedAt) || computeTimestamp(it.createdAt) || computeTimestamp(it.requestDate);
+          return ts > max ? ts : max;
+        }
+        return max;
+      }, 0);
+      const seenTs = parseInt(localStorage.getItem(WORKER_DECISION_SEEN_KEY) || '0', 10);
+      const hasUnseen = latestDecisionTs > (seenTs || 0);
+      if (markSeen && latestDecisionTs) {
+        try { localStorage.setItem(WORKER_DECISION_SEEN_KEY, String(latestDecisionTs)); } catch (_) {}
+        workerRequestAlert = false;
+      } else {
+        workerRequestAlert = hasUnseen;
+      }
+      applyWorkerIndicators();
+      return latestDecisionTs;
+    };
+
+    async function refreshWorkerRequestIndicator() {
+      if (!currentWorker || !currentWorker.id) {
+        workerRequestAlert = false;
+        applyWorkerIndicators();
+        return;
+      }
+      if (workerRequestsRefreshPromise) return workerRequestsRefreshPromise;
+      workerRequestsRefreshPromise = (async () => {
+        try {
+          const items = await fetchWorkerRequests(currentWorker.id);
+          cachedRequests = items;
+          evaluateWorkerRequestAlerts(items, { markSeen: false });
+        } catch (err) {
+          console.error('Failed to refresh worker request alerts', err);
+        } finally {
+          workerRequestsRefreshPromise = null;
+        }
+      })();
+      return workerRequestsRefreshPromise;
+    }
+
+    const evaluateWorkerMessageAlerts = (items) => {
+      const list = Array.isArray(items) ? items : [];
+      const hasUnread = list.some(it => !it.readByWorker);
+      workerMessageAlert = hasUnread;
+      applyWorkerIndicators();
+    };
+
+    async function refreshWorkerMessagesIndicator() {
+      if (!currentWorker || !currentWorker.id) {
+        workerMessageAlert = false;
+        workerMessagesCache = [];
+        applyWorkerIndicators();
+        return;
+      }
+      if (workerMessagesRefreshPromise) return workerMessagesRefreshPromise;
+      workerMessagesRefreshPromise = (async () => {
+        try {
+          const items = await fetchWorkerMessages(currentWorker.id);
+          workerMessagesCache = items;
+          evaluateWorkerMessageAlerts(items, { markSeen: false });
+        } catch (err) {
+          console.error('Failed to refresh worker messages', err);
+        } finally {
+          workerMessagesRefreshPromise = null;
+        }
+      })();
+      return workerMessagesRefreshPromise;
+    }
+
+    const syncCurrentWorkerFromServer = (options = {}) => {
+      const { silent = false } = options;
+      if (!currentWorker || !currentWorker.id) return Promise.resolve(null);
+      if (workerStatusSyncPromise) return workerStatusSyncPromise;
+      workerStatusSyncPromise = reloadWorkerFromFirestore(currentWorker).then(fresh => {
+        if (!fresh) {
+          currentWorker = null;
+          try {
+            localStorage.removeItem('nedjmaWorker');
+            localStorage.removeItem(WORKER_STATUS_ACK_KEY);
+            localStorage.removeItem(WORKER_DECISION_SEEN_KEY);
+          } catch (_) {}
+        workerRequestAlert = false;
+        workerStatusAlert = false;
+        workerMessageAlert = false;
+        applyWorkerIndicators();
+        const isAr = currentLang === 'ar';
+        const msg = isAr
+          ? 'تم حذف حسابك من قبل الإدارة. يرجى التواصل مع الإدارة لمزيد من التفاصيل.'
+          : 'Your account has been removed by the management. Please contact your manager for more details.';
+          renderView('pin_login');
+          openConfirmModal(msg, () => {});
+          return null;
+        }
+        currentWorker = fresh;
+        try { localStorage.setItem('nedjmaWorker', JSON.stringify(currentWorker)); } catch (_) {}
+        evaluateWorkerStatusAlert();
+        refreshWorkerRequestIndicator();
+        refreshWorkerMessagesIndicator();
+        if (!silent && (currentView === 'home' || currentView === 'worker_profile')) {
+          renderView(currentView);
+        }
+        return fresh;
+      }).finally(() => {
+        workerStatusSyncPromise = null;
+      });
+      return workerStatusSyncPromise;
+    };
+
+    // --- Theme Management ---
+    function applyThemeSet(themeName) {
+      const theme = themes[themeName];
+      if (!theme) return;
+
+      document.body.classList.toggle('dark', theme.type === 'dark');
+      const root = document.documentElement;
+      Object.entries(theme.colors).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+      const themeToggleIcon = document.querySelector('#themeToggleHeader i');
+      if (themeToggleIcon) {
+          themeToggleIcon.className = `fas ${theme.type === 'dark' ? 'fa-sun' : 'fa-moon'}`;
+      }
+      localStorage.setItem('app-theme', themeName);
+      currentTheme = themeName;
+    }
+
+    function toggleTheme() {
+        const currentThemeInfo = themes[currentTheme];
+        const newThemeName = (currentThemeInfo.type === 'light') ? 'default-dark' : 'default-light';
+        applyThemeSet(themes[newThemeName] ? newThemeName : 'default-light');
+    }
+
+    // --- Language Management ---
+    function setLanguage(lang) {
+      currentLang = lang;
+      window.currentLang = lang;
+      localStorage.setItem('app-lang', lang);
+      const isRTL = lang === 'ar';
+      document.documentElement.lang = lang;
+      document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+
+      // Re-render the view to apply language-specific changes (like text direction in templates)
+      renderView(currentView); 
+      // Apply translations to the newly rendered content
+      document.querySelectorAll('[data-lang-key]').forEach(el => {
+        const key = el.getAttribute('data-lang-key');
+        if (translations[currentLang] && translations[currentLang][key]) {
+          el.textContent = translations[currentLang][key];
+        }
+      });
+      applyMessagesTexts();
+      // Move indicator after language change to fix position in RTL/LTR
+      setTimeout(() => { moveIndicator(document.querySelector('.nav-item.active')); }, 50);
+    }
+
+    // --- Modal Logic ---
+    let onConfirmCallback = null;
+    function openConfirmModal(message, onConfirm) {
+        const modal = document.getElementById('confirmModal');
+        if (!modal) return;
+        document.getElementById('confirmModalMessage').textContent = message;
+        onConfirmCallback = onConfirm;
+        modal.classList.add('visible');
+    }
+
+    function closeConfirmModal() {
+        const modal = document.getElementById('confirmModal');
+        if (modal) modal.classList.remove('visible');
+        onConfirmCallback = null;
+    }
+
+    document.getElementById('confirmModal')?.addEventListener('click', (e) => {
+        if (e.target.dataset.action === 'close-modal') {
+            closeConfirmModal();
+        } else if (e.target.id === 'confirmModalConfirmBtn' && typeof onConfirmCallback === 'function') {
+            onConfirmCallback();
+            closeConfirmModal();
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+      const replyBtn = e.target.closest && e.target.closest('[data-action="worker-reply-message"]');
+      if (replyBtn) {
+        workerReplyMessageId = replyBtn.getAttribute('data-id');
+        const textarea = document.getElementById('workerReplyText');
+        if (textarea) textarea.value = '';
+        workerReplyModal?.classList.add('visible');
+        return;
+      }
+      const showMoreBtn = e.target.closest && e.target.closest('#workerShowMoreMsgs');
+      if (showMoreBtn) {
+        workerShowAllMessages = true;
+        renderWorkerMessages();
+        return;
+      }
+      const deleteMsgBtn = e.target.closest && e.target.closest('[data-action="worker-delete-message"]');
+      if (deleteMsgBtn) {
+        const mid = deleteMsgBtn.getAttribute('data-id');
+        const msg = currentLang==='ar' ? 'حذف هذه الرسالة؟' : 'Delete this message?';
+        openConfirmModal(msg, () => {
+          deleteWorkerMessage(mid).then(ok => {
+            if (!ok) {
+              openConfirmModal(currentLang==='ar'?'تعذر حذف الرسالة حالياً.':'Unable to delete the message right now.', ()=>{});
+              return;
+            }
+            renderWorkerMessages();
+            refreshWorkerMessagesIndicator();
+          });
+        });
+      }
+    });
+
+    // --- Navigation Indicator Logic ---
+    function moveIndicator(target) {
+        const navIndicator = document.querySelector('.nav-indicator');
+        if (!target || !navIndicator) {
+            if(navIndicator) navIndicator.style.width = '0px';
+            return;
+        };
+        const itemRect = target.getBoundingClientRect();
+        const navRect = target.parentElement.getBoundingClientRect();
+
+        const indicatorWidth = 48;
+        const indicatorHeight = 40; // For mobile
+
+        if (window.innerWidth < 768) {
+            // Mobile bottom bar
+            navIndicator.style.width = `${indicatorWidth}px`;
+            navIndicator.style.height = `${indicatorHeight}px`;
+            navIndicator.style.left = `${itemRect.left - navRect.left + (itemRect.width - indicatorWidth) / 2}px`;
+            navIndicator.style.top = `${(navRect.height - indicatorHeight) / 2}px`;
+        } else {
+            // Desktop sidebar
+            navIndicator.style.width = `${itemRect.width}px`;
+            navIndicator.style.height = `${itemRect.height}px`;
+            navIndicator.style.left = `${itemRect.left - navRect.left}px`;
+            navIndicator.style.top = `${itemRect.top - navRect.top}px`;
+        }
+    }
+
+    window.addEventListener('resize', () => {
+        const currentSelected = document.querySelector('.nav-item.active');
+        setTimeout(() => { if (currentSelected) moveIndicator(currentSelected); }, 50);
+    });
+
+    // Account modal helpers (worker app)
+    const accountModal = document.getElementById('accountModal');
+    const accountTitleEl = document.getElementById('accountTitle');
+    const accountNameEl = document.getElementById('accountName');
+    const accountEmailEl = document.getElementById('accountEmail');
+    const accountEmailLabelEl = document.getElementById('accountEmailLabel');
+    const accountStateEl = document.getElementById('accountState');
+    const accountLoginBtn = document.getElementById('accountLoginBtn');
+    const accountLogoutBtn = document.getElementById('accountLogoutBtn');
+    const accountWelcomeEl = document.getElementById('accountWelcome');
+    const workerReplyModal = document.getElementById('workerReplyModal');
+
+    const openModal = (el) => el && el.classList.add('visible');
+    const closeModal = (el) => el && el.classList.remove('visible');
+    const closeWorkerReplyModal = () => {
+      workerReplyMessageId = null;
+      closeModal(workerReplyModal);
+    };
+
+    const readWorkerInfo = () => {
+      if (currentWorker) return currentWorker;
+      try {
+        const raw = localStorage.getItem('nedjmaWorker');
+        if (!raw) return null;
+        currentWorker = JSON.parse(raw);
+        return currentWorker;
+      } catch (_) {
+        return null;
+      }
+    };
+
+    const applyAccountTexts = () => {
+      const isAr = currentLang === 'ar';
+      if (accountTitleEl) accountTitleEl.textContent = isAr ? 'الحساب' : 'Account';
+      // في تطبيق العامل نعرض نوع الدخول بدلاً من البريد
+      if (accountEmailLabelEl) accountEmailLabelEl.textContent = isAr ? 'طريقة تسجيل الدخول' : 'Sign-in method';
+      if (accountWelcomeEl) accountWelcomeEl.textContent = isAr
+        ? 'مرحباً بك في تطبيق العامل Nedjma Worker.'
+        : 'Welcome to the Nedjma Worker app.';
+      if (accountLoginBtn) accountLoginBtn.textContent = isAr ? 'تسجيل الدخول' : 'Sign in';
+      if (accountLogoutBtn) {
+        accountLogoutBtn.innerHTML = isAr
+          ? '<i class="fas fa-sign-out-alt"></i> تسجيل الخروج'
+          : '<i class="fas fa-sign-out-alt"></i> Sign out';
+      }
+      applyMessagesTexts();
+    };
+
+    const applyMessagesTexts = () => {
+      const isAr = currentLang === 'ar';
+      const msgBtn = document.getElementById('workerMessagesBtn');
+      if (msgBtn) msgBtn.title = isAr ? 'الرسائل' : 'Messages';
+      const replyTitle = workerReplyModal?.querySelector('h3');
+      if (replyTitle) replyTitle.textContent = isAr ? 'رد على الرسالة' : 'Reply to message';
+      const replyTextarea = document.getElementById('workerReplyText');
+      if (replyTextarea) {
+        replyTextarea.placeholder = isAr ? 'أدخل ردك على رسالة الإدارة...' : 'Write your reply to management...';
+        if (replyTextarea.parentElement) replyTextarea.parentElement.style.textAlign = isAr ? 'right' : 'left';
+      }
+      const replySubmit = document.getElementById('workerReplySubmit');
+      if (replySubmit) replySubmit.textContent = isAr ? 'إرسال الرد' : 'Send reply';
+    };
+
+    const updateProfileIcon = () => {
+      const info = readWorkerInfo();
+      if (!userProfileBtn) return;
+      const iconEl = userProfileBtn.querySelector('i');
+      if (!iconEl) return;
+      if (info) {
+        iconEl.className = 'fas fa-user-check';
+        userProfileBtn.classList.remove('ghost');
+        userProfileBtn.style.backgroundColor = 'var(--accent)';
+        userProfileBtn.style.color = '#ffffff';
+      } else {
+        iconEl.className = 'fas fa-user-circle';
+        userProfileBtn.classList.add('ghost');
+        userProfileBtn.style.backgroundColor = 'transparent';
+        userProfileBtn.style.color = '';
+      }
+    };
+
+    applyAccountTexts();
+    updateProfileIcon();
+    evaluateWorkerStatusAlert();
+    workerMessagesBtn?.addEventListener('click', () => {
+      if (!currentWorker || !currentWorker.id) {
+        const msg = currentLang === 'ar' ? 'يرجى تسجيل الدخول لعرض الرسائل.' : 'Please sign in to view your messages.';
+        openConfirmModal(msg, () => renderView('pin_login'));
+        return;
+      }
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      renderView('messages_center');
+    });
+
+    // حاول تحديث بيانات العامل من Firestore في كل مرة يُفتح فيها التطبيق
+    syncCurrentWorkerFromServer();
+
+    userProfileBtn?.addEventListener('click', () => {
+      if (!accountModal) {
+        renderView('pin_login');
+        return;
+      }
+      const info = readWorkerInfo();
+      if (info) {
+        const isAr = currentLang === 'ar';
+        accountNameEl.textContent = info.name || (isAr ? 'بدون اسم' : 'No name');
+        // نعرض وصف مختصر لطريقة الدخول (بدون إظهار PIN)
+        accountEmailEl.textContent = isAr
+          ? 'تم تسجيل الدخول عن طريق رمز مرسل من الإدارة.'
+          : 'Signed in using the code provided by your manager.';
+        accountStateEl.textContent = isAr ? 'مسجل الدخول حالياً' : 'Currently signed in';
+        accountLogoutBtn.style.display = 'inline-flex';
+        accountLoginBtn.style.display = 'none';
+      } else {
+        const isAr = currentLang === 'ar';
+        accountNameEl.textContent = isAr ? 'غير مسجل' : 'Not signed in';
+        accountEmailEl.textContent = isAr
+          ? 'يجب تسجيل الدخول للوصول إلى جميع مميزات تطبيق العامل.'
+          : 'You must sign in to access all worker app features.';
+        accountStateEl.textContent = isAr ? 'لم تقم بتسجيل الدخول بعد' : 'You are not signed in yet';
+        accountLogoutBtn.style.display = 'none';
+        accountLoginBtn.style.display = 'inline-flex';
+      }
+      openModal(accountModal);
+      applyAccountTexts();
+      updateProfileIcon();
+    });
+
+    accountModal?.addEventListener('click', (e) => {
+      if (e.target.closest('[data-action=\"close-account-modal\"]')) {
+        closeModal(accountModal);
+      }
+    });
+
+    workerReplyModal?.addEventListener('click', (e) => {
+      if (e.target.closest('[data-action="close-worker-reply"]')) {
+        closeWorkerReplyModal();
+      }
+    });
+
+    const workerReplySubmitBtn = document.getElementById('workerReplySubmit');
+    workerReplySubmitBtn?.addEventListener('click', async () => {
+      if (!workerReplyMessageId) {
+        closeWorkerReplyModal();
+        return;
+      }
+      const textarea = document.getElementById('workerReplyText');
+      const text = textarea && 'value' in textarea ? textarea.value.trim() : '';
+      if (!text) return;
+      workerReplySubmitBtn.disabled = true;
+      workerReplySubmitBtn.textContent = currentLang==='ar' ? 'جاري الإرسال...' : 'Sending...';
+      const ok = await sendWorkerReply(workerReplyMessageId, text);
+      workerReplySubmitBtn.disabled = false;
+      workerReplySubmitBtn.textContent = currentLang==='ar' ? 'إرسال الرد' : 'Send reply';
+      if (ok) {
+        closeWorkerReplyModal();
+        workerReplyMessageId = null;
+        renderWorkerMessages();
+        refreshWorkerMessagesIndicator();
+        showWorkerToast(currentLang==='ar'?'تم إرسال الرد.':'Reply sent.');
+      } else {
+        openConfirmModal(currentLang==='ar'?'تعذر إرسال الرد حالياً.':'Unable to send reply right now.', ()=>{});
+      }
+    });
+
+    accountLoginBtn?.addEventListener('click', () => {
+      closeModal(accountModal);
+      currentWorker = null;
+      try {
+        localStorage.removeItem('nedjmaWorker');
+        localStorage.removeItem(WORKER_STATUS_ACK_KEY);
+        localStorage.removeItem(WORKER_DECISION_SEEN_KEY);
+      } catch (_) {}
+      workerRequestAlert = false;
+      workerStatusAlert = false;
+       workerMessageAlert = false;
+      applyWorkerIndicators();
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      renderView('pin_login');
+    });
+
+    accountLogoutBtn?.addEventListener('click', () => {
+      try {
+        localStorage.removeItem('nedjmaWorker');
+        localStorage.removeItem(WORKER_STATUS_ACK_KEY);
+        localStorage.removeItem(WORKER_DECISION_SEEN_KEY);
+      } catch (_) {}
+      currentWorker = null;
+      workerRequestAlert = false;
+      workerStatusAlert = false;
+      workerMessageAlert = false;
+      applyWorkerIndicators();
+      closeModal(accountModal);
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      renderView('pin_login');
+    });
+
+    // --- Initial Load & Splash Screen ---
+    applyThemeSet(currentTheme);
+    // simulated loading progress (no buttons — only loading spinner)
+    let splashProgress = 0;
+
+
+    function finishSplash() {
+      if (!splash || splash.classList.contains('hidden')) return;
+      if (splashFill) splashFill.style.width = '100%';
+      if (splashValue) splashValue.textContent = '100%';
+      splash.classList.add('hidden');
+      app.style.visibility = 'visible';
+      appLayout.style.visibility = 'visible';
+      setLanguage(currentLang); // Apply language AFTER splash is hidden and UI is visible
+      renderView(currentView);
+      refreshWorkerRequestIndicator();
+      refreshWorkerMessagesIndicator();
+    }
+
+    // auto-progress: advance then finish automatically
+    const splashInterval = setInterval(() => {
+      splashProgress += Math.floor(Math.random() * 20) + 6; // random step
+      if (splashProgress > 100) splashProgress = 100;
+      if (splashFill) splashFill.style.width = `${splashProgress}%`;
+      if (splashValue) splashValue.textContent = `${splashProgress}%`;
+      if (splashProgress >= 100) {
+        clearInterval(splashInterval);
+        setTimeout(finishSplash, 240);
+      }
+    }, 200);
+
+    let messagePollInterval = null;
+    const startMessagePolling = () => {
+      if (messagePollInterval) clearInterval(messagePollInterval);
+      messagePollInterval = setInterval(() => {
+        if (currentWorker && currentWorker.id) {
+          refreshWorkerMessagesIndicator();
+        }
+      }, 20000);
+    };
+    startMessagePolling();
+
+    // Initial render (prepare UI while splash shows)
+    moveIndicator(document.querySelector('.nav-item.active'));
+
+    // --- Event Listeners ---
+    document.getElementById('mainNav').addEventListener('click', (e) => {
+      const navItem = e.target.closest('.nav-item');
+      if (!navItem) return;
+      
+      const viewName = navItem.dataset.view;
+      if (viewName) {
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        navItem.classList.add('active');
+        renderView(viewName);
+        moveIndicator(navItem);
+      }
+    });
+
+    app.addEventListener('click', (e) => {
+      const navButton = e.target.closest('[data-action="navigate"]');
+      if (navButton) {
+        renderView(navButton.dataset.view);
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.view === navButton.dataset.view);
+            if(item.classList.contains('active')) moveIndicator(item);
+        });
+      }
+
+      const langButton = e.target.closest('[data-lang]');
+      if (langButton) {
+        const langToSet = langButton.dataset.lang;
+        const langName = langToSet === 'ar' ? 'العربية' : 'English'; // Keep this for display
+        const messageTemplate = translations[currentLang].confirmLangChange || "Are you sure you want to change the language to {langName}?";
+        openConfirmModal(messageTemplate.replace('{langName}', langName), () => {
+            setLanguage(langToSet);
+        });
+      }
+
+      const themeCard = e.target.closest('.theme-card');
+      if (themeCard) {
+        applyThemeSet(themeCard.dataset.theme);
+        renderView('settings');
+      }
+
+      const themeToggleBtn = e.target.closest('#themeToggleHeader');
+      if (themeToggleBtn) {
+        toggleTheme();
+      }
+    });
+
+    // --- Dynamic Content Update ---
+    function updateDate() {
+      const dateElement = document.getElementById('currentDateText');
+      const locale = currentLang === 'ar' ? 'ar-DZ' : 'en-US';
+      if(dateElement) dateElement.textContent = new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    // --- View Templates ---
+
+    function getPinLoginView() {
+      const isRTL = currentLang === 'ar';
+      const title = isRTL ? 'تسجيل الدخول باستخدام الرمز' : 'Sign in with your code';
+      const subtitle = isRTL
+        ? 'أدخل الرمز المكوَّن من 4 أرقام الذي حصلت عليه من الإدارة.'
+        : 'Enter the 4‑digit code you received from your manager.';
+      const placeholder = isRTL ? '••••' : '••••';
+      const btnLabel = isRTL ? 'تسجيل الدخول' : 'Sign in';
+      const errorFallback = isRTL ? 'الرمز غير صحيح. حاول مرة أخرى.' : 'Invalid code. Please try again.';
+      return `
+        <div style="
+          min-height:72vh;
+          padding:24px 16px;
+          display:flex;
+          justify-content:center;
+          align-items:center;
+          background:
+            radial-gradient(circle at 0% 0%, rgba(56,189,248,0.15), transparent 55%),
+            radial-gradient(circle at 100% 100%, rgba(16,185,129,0.18), transparent 55%);
+        ">
+          <div style="width:100%; max-width:460px; display:flex; flex-direction:column; align-items:center; gap:20px;">
+            <div style="width:80px; height:80px; border-radius:28px; background:#ffffff; box-shadow:0 16px 40px rgba(15,23,42,0.22); display:flex; align-items:center; justify-content:center; overflow:hidden;">
+              <img src="images/logo.png" alt="Labo Nedjma Logo" style="width:70px; height:70px; border-radius:22px; object-fit:cover;">
+            </div>
+            <div class="card" style="max-width:460px; width:100%; text-align:${isRTL?'right':'left'}; padding:24px 22px; box-sizing:border-box; box-shadow:0 20px 45px rgba(15,23,42,0.18);">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+              <div style="width:44px; height:44px; border-radius:16px; background:linear-gradient(135deg,#0f766e,#14b8a6); display:flex; align-items:center; justify-content:center; color:#fff;">
+                <i class="fas fa-key"></i>
+              </div>
+              <div>
+                <h2 style="margin:0; font-size:19px; font-weight:800;">${title}</h2>
+                <p style="margin:4px 0 0; font-size:13px; color:var(--muted);">${subtitle}</p>
+              </div>
+            </div>
+
+            <form id="pinLoginForm" style="margin-top:10px;">
+              <label style="display:block; font-weight:700; margin-bottom:6px;">${isRTL?'الرمز الشخصي':'Your code'}</label>
+              <div class="input-wrap" style="margin-bottom:10px;">
+                <input id="pinInput" type="password" inputmode="numeric" pattern="\\d*" maxlength="4"
+                  placeholder="${placeholder}"
+                  style="width:100%; padding:12px; border-radius:14px; border:1px solid var(--border-color); text-align:center; font-size:22px; letter-spacing:8px;"
+                  required />
+              </div>
+              <p id="pinLoginError" style="display:none; color:#dc2626; font-size:13px; margin:0 0 10px;"></p>
+              <button type="submit" class="btn" style="width:100%; margin-top:4px;">
+                <i class="fas fa-arrow-right-to-bracket"></i>
+                <span>${btnLabel}</span>
+              </button>
+            </form>
+
+            <p id="pinLoginErrorTemplate" style="display:none;">${errorFallback}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getHomeView() {
+      return `
+        <!-- Welcome Card (similar to main app but for worker) -->
+        <section class="welcome-card" aria-label="لوحة التحكم" style="margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div>
+                    <h2 style="margin:0;font-weight:800; font-size: 20px;" data-lang-key="welcome">${translations[currentLang].welcome}</h2>
+                    <p style="margin:4px 0 0;opacity:.9; font-size: 13px;" data-lang-key="appSloganWorker">${translations[currentLang].appSloganWorker}</p>
+                </div>
+                <button id="workerHomeRefresh" class="btn icon-btn" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);" title="${translations[currentLang].updateData}">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Date Card (same as main app) -->
+        <div class="card date-card" style="flex-direction: row; justify-content: space-between; align-items: center; text-align: ${currentLang === 'ar' ? 'right' : 'left'}; margin-bottom: 16px; padding: 16px;">
+            <div style="display:flex; align-items:center; gap: 12px;">
+                <div class="icon" style="width:48px; height:48px; font-size: 20px; margin-bottom: 0;"><i class="fas fa-calendar-day"></i></div>
+                <div>
+                    <div id="currentDateText" style="font-weight: 800; font-size: 16px;"></div>
+                    <div style="font-size: 13px; opacity: 0.8;" data-lang-key="today">${translations[currentLang].today}</div>
+                </div>
+            </div>
+            <button id="workerGlobalSearchBtn" class="btn icon-btn" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.2);" title="${translations[currentLang].globalSearchTitle || (currentLang==='ar'?'بحث في التطبيق':'Search in app')}">
+              <i class="fas fa-search"></i>
+            </button>
+        </div>
+
+        <div class="grid-cards">
+            <div class="card has-indicator" data-action="navigate" data-view="send_request">
+                <span class="card-indicator" id="workerRequestsIndicator"></span>
+                <div class="icon" style="background:linear-gradient(135deg,#f97316,#f59e0b)">
+                  <img src="images/send.svg" alt="send" style="width:28px;height:28px;filter: drop-shadow(0 0 0 rgba(0,0,0,0));" />
+                </div>
+                <div>
+                  <div style="font-weight:900; font-size: 15px;" data-lang-key="workerCard1">${translations[currentLang].workerCard1}</div>
+                  <div style="font-size:12px; margin-top: 2px; color: var(--muted);" data-lang-key="workerCard1_desc">${translations[currentLang].workerCard1_desc}</div>
+                </div>
+            </div>
+            <!-- Card 2 with a dedicated logo (inline SVG) -->
+            <div class="card" data-action="navigate" data-view="attendance">
+                <div class="icon" style="background:linear-gradient(135deg,#10b981,#059669)">
+                  <!-- Calendar check logo -->
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="4" width="18" height="17" rx="2.5" ry="2.5" stroke="white" stroke-width="1.6"/>
+                    <path d="M8 2v4M16 2v4" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+                    <path d="M3 9h18" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+                    <path d="M8.2 15.2l2.2 2.2 5-5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div>
+                  <div style="font-weight:900; font-size: 15px;" data-lang-key="workerCard2">${translations[currentLang].workerCard2}</div>
+                  <div style="font-size:12px; margin-top: 2px; color: var(--muted);" data-lang-key="workerCard2_desc">${translations[currentLang].workerCard2_desc}</div>
+                </div>
+            </div>
+            <!-- Card 3 with a dedicated logo (wallet SVG) -->
+            <div class="card" data-action="navigate" data-view="wallet">
+                <div class="icon" style="background:linear-gradient(135deg,#06b6d4,#0284c7)">
+                  <!-- Wallet logo -->
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 7.5C3 6.12 4.12 5 5.5 5h9.8c.4 0 .72.32.72.72v.06c0 .52-.42.94-.94.94H6.2C4.98 6.72 4 7.7 4 8.92V17c0 1.66 1.34 3 3 3h10.5c1.38 0 2.5-1.12 2.5-2.5V10.5c0-1.38-1.12-2.5-2.5-2.5H6.2" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+                    <rect x="14.5" y="10.5" width="6" height="5" rx="1.2" stroke="white" stroke-width="1.6"/>
+                    <circle cx="17.8" cy="13" r=".9" fill="white"/>
+                  </svg>
+                </div>
+                <div>
+                  <div style="font-weight:900; font-size: 15px;" data-lang-key="workerCard3">${translations[currentLang].workerCard3}</div>
+                  <div style="font-size:12px; margin-top: 2px; color: var(--muted);" data-lang-key="workerCard3_desc">${translations[currentLang]["workerCard3_desc"]}</div>
+                </div>
+            </div>
+            ${createWorkerCard('workerCard4', 'workerCard4_desc', 'fa-user-circle', 'linear-gradient(135deg,#64748b,#475569)', 'worker_profile', 'workerProfileIndicator')}
+        </div>
+
+        <!-- Preview Request Modal -->
+        <div id="requestPreview" class="modal-container" aria-hidden="true">
+          <div class="modal-backdrop" data-action="close-request-preview"></div>
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 id="previewTitle" style="margin:0">—</h3>
+              <button class="close-btn" data-action="close-request-preview">&times;</button>
+            </div>
+            <div class="modal-body" id="previewBody" style="text-align:${currentLang === 'ar' ? 'right' : 'left'};"></div>
+            <div class="modal-footer">
+              <button class="btn ghost" data-action="close-request-preview" data-lang-key="cancel">${translations[currentLang].cancel}</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function createWorkerCard(titleKey, descKey, iconClass, gradient, targetView = '', indicatorId = '') {
+        const navigateAttr = targetView ? `data-action="navigate" data-view="${targetView}"` : '';
+        const indicator = indicatorId ? `<span class="card-indicator" id="${indicatorId}"></span>` : '';
+        const indicatorClass = indicatorId ? 'has-indicator' : '';
+        return `
+            <div class="card ${indicatorClass}" ${navigateAttr}>
+                ${indicator}
+                <div class="icon" style="background:${gradient}"><i class="fas ${iconClass}"></i></div>
+                <div>
+                  <div style="font-weight:900; font-size: 15px;" data-lang-key="${titleKey}">${translations[currentLang][titleKey]}</div>
+                  <div style="font-size:12px; margin-top: 2px; color: var(--muted);" data-lang-key="${descKey}">${translations[currentLang][descKey]}</div>
+                </div>
+            </div>`;
+    }
+
+    function getSendRequestView() {
+      const isRTL = currentLang === 'ar';
+      const backIcon = isRTL ? 'fa-arrow-right' : 'fa-arrow-left';
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; gap: 12px;">
+          <button data-action="navigate" data-view="home" class="btn icon-btn" title="${translations[currentLang].backToHome}"><i class="fas ${backIcon}"></i></button>
+          <h3 style="margin:0; font-weight:800; flex-grow: 1; text-align:${isRTL ? 'right' : 'left'};" data-lang-key="sendRequestTitle">${translations[currentLang].sendRequestTitle}</h3>
+          <button id="openRequestModal" class="btn icon-btn" title="${translations[currentLang].addRequest}"><i class="fas fa-plus"></i></button>
+        </div>
+        <div id="requestsList" style="min-height:160px; color: var(--muted); max-width:520px; margin:0 auto;"></div>
+
+        <div id="requestModal" class="modal-container" aria-hidden="true">
+          <div class="modal-backdrop" data-action="close-request-modal"></div>
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 style="margin:0" data-lang-key="requestDetailsTitle">${translations[currentLang].requestDetailsTitle}</h3>
+              <button class="close-btn" data-action="close-request-modal">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align:${isRTL ? 'right' : 'left'};">
+              <label style="display:block; font-weight:700; margin-bottom:8px;" data-lang-key="requestType">${translations[currentLang].requestType}</label>
+              <div id="typeOptions" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px;">
+                <button type="button" class="btn ghost type-option" data-type="absence"><i class="fas fa-calendar-times"></i> <span data-lang-key="typeAbsence">${translations[currentLang].typeAbsence}</span></button>
+                <button type="button" class="btn ghost type-option" data-type="vacation"><i class="fas fa-umbrella-beach"></i> <span data-lang-key="typeVacation">${translations[currentLang].typeVacation}</span></button>
+                <button type="button" class="btn ghost type-option" data-type="complaint"><i class="fas fa-gavel"></i> <span data-lang-key="typeComplaint">${translations[currentLang].typeComplaint}</span></button>
+                <button type="button" class="btn ghost type-option" data-type="note"><i class="fas fa-sticky-note"></i> <span data-lang-key="typeNote">${translations[currentLang].typeNote}</span></button>
+                <button type="button" class="btn ghost type-option" data-type="document"><i class="fas fa-file-alt"></i> <span data-lang-key="typeDocument">${translations[currentLang].typeDocument}</span></button>
+              </div>
+
+              <label style="display:block; font-weight:700; margin-bottom:6px;" data-lang-key="requestDate">${translations[currentLang].requestDate}</label>
+              <div class="input-wrap">
+                <i class="fas fa-calendar input-icon-left"></i>
+                <input id="requestDateInput" type="date" />
+                <i class="fas fa-clock input-icon-right" title="${translations[currentLang].requestDate}"></i>
+              </div>
+
+              <div id="extraDateFields" style="margin-top:12px; display:none;">
+                <div id="absenceDateGroup" style="display:none;">
+                  <label style="display:block; font-weight:700; margin-bottom:6px;" data-lang-key="absenceDate">${translations[currentLang].absenceDate}</label>
+                  <div class="input-wrap">
+                    <i class="fas fa-calendar-day input-icon-left"></i>
+                    <input id="absenceDateInput" type="date" />
+                    <i class="fas fa-pen input-icon-right"></i>
+                  </div>
+                </div>
+                <div id="vacationDatesGroup" style="display:none;">
+                  <label style="display:block; font-weight:700; margin-bottom:6px;" data-lang-key="vacationStart">${translations[currentLang].vacationStart}</label>
+                  <div class="input-wrap">
+                    <i class="fas fa-plane-departure input-icon-left"></i>
+                    <input id="vacStartInput" type="date" />
+                    <i class="fas fa-pen input-icon-right"></i>
+                  </div>
+                  <label style="display:block; font-weight:700; margin:12px 0 6px;" data-lang-key="vacationEnd">${translations[currentLang].vacationEnd}</label>
+                  <div class="input-wrap">
+                    <i class="fas fa-plane-arrival input-icon-left"></i>
+                    <input id="vacEndInput" type="date" />
+                    <i class="fas fa-pen input-icon-right"></i>
+                  </div>
+                </div>
+              </div>
+
+              <label style="display:block; font-weight:700; margin:14px 0 6px;" data-lang-key="notes">${translations[currentLang].notes}</label>
+              <div class="input-wrap">
+                <i class="fas fa-pen input-icon-left"></i>
+                <textarea id="requestNotes" style="min-height:110px;" placeholder="${translations[currentLang].notesPlaceholder}"></textarea>
+                <i class="fas fa-sticky-note input-icon-right"></i>
+              </div>
+            </div>
+            <div class="modal-footer" style="flex-direction: column; gap: 8px;">
+              <button id="submitRequestBtn" class="btn primary-wide" data-lang-key="submitRequest"><i class="fas fa-paper-plane"></i> ${translations[currentLang].submitRequest}</button>
+              <button class="btn ghost" data-action="close-request-modal" data-lang-key="cancel">${translations[currentLang].cancel}</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getMessagesView() {
+      const isRTL = currentLang === 'ar';
+      const backIcon = isRTL ? 'fa-arrow-right' : 'fa-arrow-left';
+      const title = isRTL ? 'الرسائل' : 'Messages';
+      const emptyText = isRTL ? 'لا توجد رسائل حتى الآن.' : 'No messages yet.';
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; gap: 12px;">
+          <button data-action="navigate" data-view="home" class="btn icon-btn" title="${translations[currentLang].backToHome}"><i class="fas ${backIcon}"></i></button>
+          <h3 style="margin:0; font-weight:800; flex-grow:1; text-align:${isRTL ? 'right' : 'left'};">${title}</h3>
+          <span style="width:42px;"></span>
+        </div>
+        <div id="workerMessagesList" style="min-height:200px; color:var(--muted);">
+          <div style="text-align:center; padding:32px;">${emptyText}</div>
+        </div>
+      `;
+    }
+
+    async function renderWorkerMessages() {
+      const list = document.getElementById('workerMessagesList');
+      if (!list) return;
+      if (!currentWorker || !currentWorker.id) {
+        list.innerHTML = `<div style="text-align:center; padding:32px;">${currentLang==='ar'?'يرجى تسجيل الدخول لعرض الرسائل.':'Please sign in to view messages.'}</div>`;
+        return;
+      }
+      list.innerHTML = `<div style="text-align:center; padding:32px;">${currentLang==='ar'?'جاري التحميل...':'Loading...'}</div>`;
+      let items = [];
+      try {
+        items = await fetchWorkerMessages(currentWorker.id);
+      } catch (err) {
+        console.error('Failed to load messages', err);
+        list.innerHTML = `<div style="text-align:center; padding:32px; color:var(--muted);">${currentLang==='ar'?'تعذر تحميل الرسائل حالياً.':'Unable to load messages right now.'}</div>`;
+        return;
+      }
+      workerMessagesCache = items;
+      if (!items.length) {
+        list.innerHTML = `<div style="text-align:center; padding:32px;">${currentLang==='ar'?'لا توجد رسائل حتى الآن.':'No messages yet.'}</div>`;
+        evaluateWorkerMessageAlerts([]);
+        return;
+      }
+      const visible = workerShowAllMessages ? items : items.slice(0,2);
+      const cards = visible.map(item => {
+        const created = formatDateTime(item.createdAt);
+        const statusKey = item.workerReply ? (currentLang==='ar'?'تم الرد':'Replied')
+                         : item.readByWorker ? (currentLang==='ar'?'مقروء':'Read')
+                         : (currentLang==='ar'?'جديد':'New');
+        const chipStyle = item.workerReply
+          ? 'background:rgba(34,197,94,.12); color:#15803d;'
+          : item.readByWorker
+            ? 'background:rgba(59,130,246,.12); color:#1d4ed8;'
+            : 'background:rgba(239,68,68,.15); color:#b91c1c;';
+        const replyBlock = item.workerReply
+          ? `<div class="message-reply">${item.workerReply}</div>`
+          : '';
+        const replyMeta = item.workerReplyAt ? `<span>${currentLang==='ar'?'رددت في':'Replied at'} ${formatDateTime(item.workerReplyAt)}</span>` : '';
+        const actions = [];
+        if (!item.workerReply) {
+          actions.push(`<button class="btn ghost" data-action="worker-reply-message" data-id="${item.id}">${currentLang==='ar'?'رد الآن':'Reply'}</button>`);
+        }
+        actions.push(`<button class="btn ghost" data-action="worker-delete-message" data-id="${item.id}" title="${currentLang==='ar'?'حذف الرسالة':'Delete message'}"><i class="fas fa-trash"></i></button>`);
+        const actionsHtml = `<div class="message-actions">${actions.join('')}</div>`;
+        return `
+          <article class="message-card" data-id="${item.id}">
+            <span class="message-chip" style="${chipStyle}">${statusKey}</span>
+            <div class="message-body">${item.managerMessage || ''}</div>
+            <div class="message-meta">
+              <span>${currentLang==='ar'?'الإدارة':'Manager'}</span>
+              <span>${created || ''}</span>
+              ${replyMeta}
+            </div>
+            ${replyBlock}
+            ${actionsHtml}
+          </article>`;
+      }).join('');
+      const showMoreBtn = (items.length > 2 && !workerShowAllMessages)
+        ? `<div style="text-align:center; margin-top:10px;"><button class="btn ghost" id="workerShowMoreMsgs">${currentLang==='ar'?'عرض المزيد':'Show more'}</button></div>`
+        : '';
+      list.innerHTML = `<div class="messages-feed">${cards}</div>${showMoreBtn}`;
+      const unreadIds = items.filter(it => !it.readByWorker).map(it => it.id);
+      if (unreadIds.length) {
+        await markMessagesAsRead(unreadIds);
+      }
+      evaluateWorkerMessageAlerts(items);
+    }
+
+    // --- Attendance View ---
+    function getAttendanceView() {
+      const isRTL = currentLang === 'ar';
+      const backIcon = isRTL ? 'fa-arrow-right' : 'fa-arrow-left';
+      const today = new Date();
+      // Selected month stored globally between renders
+      if (!window.__attMonth) window.__attMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const sel = window.__attMonth;
+      const yyyy = sel.getFullYear();
+      const mm = sel.getMonth();
+      // Key helpers
+      const keyMonth = `${yyyy}-${String(mm+1).padStart(2,'0')}`;
+      const storageKey = `attendance_${keyMonth}`;
+      const data = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      const days = data.days || {}; // { 'YYYY-MM-DD': 'present'|'absent' }
+      // Totals (counts only)
+      const presentDays = Object.values(days).filter(v => v==='present').length;
+      const absentDays = Object.values(days).filter(v => v==='absent').length;
+      const totalMarked = presentDays + absentDays;
+
+      // Month label in current language
+      const monthLabel = sel.toLocaleDateString(currentLang==='ar'?'ar-DZ':'en-US', { month: 'long', year: 'numeric' });
+
+      // Build weekday headers starting Saturday
+      const weekdays = currentLang==='ar'
+        ? ['س','ن','ث','ر','خ','ج','س']
+        : ['Sa','Su','Mo','Tu','We','Th','Fr'];
+
+      // Calendar grid
+      const firstDay = new Date(yyyy, mm, 1);
+      const lastDay = new Date(yyyy, mm+1, 0);
+      const pad2 = (n) => String(n).padStart(2,'0');
+      const localKey = (d) => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+      const todayKeySameMonth = (today.getFullYear()===yyyy && today.getMonth()===mm) ? localKey(today) : null;
+      // Working days count for the selected month (Saturday..Thursday)
+      const workingDaysInMonth = (() => {
+        let c = 0;
+        for (let d=1; d<=lastDay.getDate(); d++) {
+          const wd = new Date(yyyy, mm, d).getDay(); // 0=Sun..6=Sat
+          if (wd !== 5) c++; // exclude Friday only
+        }
+        return c;
+      })();
+      // Map JS weekday (0=Sun..6=Sat) to our grid start Saturday index
+      const jsToOur = d => (d===6?0:d+1); // Sun->1 ... Fri->6, Sat->0
+      const leading = jsToOur(firstDay.getDay());
+      const totalCells = leading + lastDay.getDate();
+      const cells = [];
+      for (let i=0;i<leading;i++) cells.push({ empty:true });
+      for (let d=1; d<=lastDay.getDate(); d++) {
+        const ds = `${yyyy}-${String(mm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        cells.push({ day:d, key:ds, status: days[ds]||null, isToday: todayKeySameMonth===ds });
+      }
+
+      const cellsHtml = cells.map(c=>{
+        if (c.empty) return `<div class="att-day muted" aria-hidden="true"></div>`;
+        const cls = c.status ? ` ${c.status}` : '';
+        const tcls = c.isToday ? ' today' : '';
+        return `<div class="att-day${cls}${tcls}" data-att-day="${c.key}" title="${c.key}">${c.day}</div>`;
+      }).join('');
+
+      // Activity list
+      const activities = [];
+      const times = data.times || {};
+      Object.entries(days).forEach(([k,v])=>activities.push({date:k,type: v==='present'?'present':'absent', tinfo: times[k]}));
+      // Rewards/Deductions removed per request
+      activities.sort((a,b)=> a.date.localeCompare(b.date));
+      const renderActItem = (a) => {
+            const t = a.type==='present' ? (currentLang==='ar'?'حضور':'Present')
+                    : (currentLang==='ar'?'غياب':'Absent');
+            const isPresent = a.type==='present';
+            const icon = isPresent ? 'fa-check-circle' : 'fa-user-slash';
+            const bg = isPresent ? 'linear-gradient(135deg,#10b981,#059669)' : 'linear-gradient(135deg,#ef4444,#b91c1c)';
+            const chip = isPresent ? (currentLang==='ar'?'حاضر':'Present') : (currentLang==='ar'?'غائب':'Absent');
+            const times = a.tinfo ? ` — ${currentLang==='ar'?'من':'In'} ${a.tinfo.in||'-'} ${currentLang==='ar'?'إلى':'Out'} ${a.tinfo.out||'-'}` : '';
+            return `
+              <div class=\"activity-item\">
+                <div class=\"activity-main\">
+                  <div class=\"activity-icon\" style=\"background:${bg}\"><i class=\"fas ${icon}\"></i></div>
+                  <div>
+                    <div class=\"activity-title\">${t}</div>
+                    <div class=\"activity-meta\">${a.date}${times}</div>
+                  </div>
+                </div>
+                <div class=\"status-chip\">${chip}</div>
+              </div>`;
+          };
+      const actHtml = activities.length
+        ? activities.slice(0,3).map(renderActItem).join('')
+        : `<div class="activity-meta">${currentLang==='ar'?'لا توجد أنشطة مسجلة.':'No activities yet.'}</div>`;
+      const showMoreHtml = activities.length>3 ? `<div style="margin-top:10px;text-align:center;"><button class="btn ghost" id="showAllActivities">${currentLang==='ar'?'إظهار المزيد':'Show More'}</button></div>` : '';
+
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; gap: 12px;">
+          <button data-action="navigate" data-view="home" class="btn icon-btn" title="${translations[currentLang].backToHome}"><i class="fas ${backIcon}"></i></button>
+          <h3 style="margin:0; font-weight:800; flex-grow: 1; text-align:${isRTL ? 'right' : 'left'};">${translations[currentLang].workerCard2}</h3>
+          <span></span>
+        </div>
+
+        <div class="att-summary">
+          <div class="att-box">
+            <div class="lbl">${currentLang==='ar'?'أيام الحضور':'Present Days'}</div>
+            <div class="val" id="attPresent">${presentDays}</div>
+          </div>
+          <div class="att-box">
+            <div class="lbl">${currentLang==='ar'?'أيام الغياب':'Absent Days'}</div>
+            <div class="val" id="attAbsent">${absentDays}</div>
+          </div>
+          <div class="att-box">
+            <div class="lbl">${currentLang==='ar'?'أيام العمل هذا الشهر':'Working Days This Month'}</div>
+            <div class="val" id="attWorkDays">${workingDaysInMonth}</div>
+          </div>
+        </div>
+
+        <div class="att-card">
+          <div class="att-header">
+            <button class="btn icon-btn ghost" id="attPrev"><i class="fas ${isRTL?'fa-chevron-right':'fa-chevron-left'}"></i></button>
+            <div class="att-month">${monthLabel}</div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn icon-btn ghost" id="attPrint" title="${currentLang==='ar'?'طباعة':'Print'}"><i class="fas fa-print"></i></button>
+              <button class="btn icon-btn ghost" id="attNext"><i class="fas ${isRTL?'fa-chevron-left':'fa-chevron-right'}"></i></button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:0 6px 6px;">
+            ${weekdays.map(w=>`<div class='att-weekday'>${w}</div>`).join('')}
+          </div>
+          <div class="att-grid">${cellsHtml}</div>
+
+          <div class="att-actions">
+            <button class="btn" style="background:#10b981" id="markPresent"><i class="fas fa-briefcase"></i> ${currentLang==='ar'?'يوم عمل':'Work Day'}</button>
+            <button class="btn" style="background:#ef4444" id="markAbsent"><i class="fas fa-user-slash"></i> ${currentLang==='ar'?'غياب':'Absent'}</button>
+            <button class="btn" style="background:#64748b" id="clearDay"><i class="fas fa-eraser"></i> ${currentLang==='ar'?'مسح':'Clear'}</button>
+          </div>
+        </div>
+
+        <div class="activity-list" id="activityList">
+          <h4 style="margin:12px 0 8px; font-weight:800;">${currentLang==='ar'?'أنشطة الشهر':'Monthly Activities'}</h4>
+          ${actHtml}
+          ${showMoreHtml}
+        </div>
+
+        <!-- Confirm Work Day Modal -->
+        <div id="attConfirmModal" class="modal-container" aria-hidden="true">
+          <div class="modal-backdrop" data-action="close-att-confirm"></div>
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 style="margin:0">${currentLang==='ar'?'تأكيد يوم العمل':'Confirm Work Day'}</h3>
+              <button class="close-btn" data-action="close-att-confirm">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align:${currentLang==='ar'?'right':'left'};">
+              <p style="margin-top:0">${currentLang==='ar'?'يمكنك إدخال وقت الدخول والخروج بشكل اختياري.':'You may optionally add check‑in and check‑out times.'}</p>
+              <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                  <label style="display:block; font-weight:700; margin-bottom:6px;">${currentLang==='ar'?'وقت الدخول':'Check‑in'}</label>
+                  <input id="attTimeIn" type="time" />
+                </div>
+                <div style="flex:1;">
+                  <label style="display:block; font-weight:700; margin-bottom:6px;">${currentLang==='ar'?'وقت الخروج':'Check‑out'}</label>
+                  <input id="attTimeOut" type="time" />
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn ghost" data-action="close-att-confirm">${currentLang==='ar'?'إلغاء':'Cancel'}</button>
+              <button class="btn" id="attConfirmBtn">${currentLang==='ar'?'تأكيد':'Confirm'}</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- All activities modal -->
+        <div id="attActivitiesModal" class="modal-container" aria-hidden="true">
+          <div class="modal-backdrop" data-action="close-att-activities"></div>
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 style="margin:0">${currentLang==='ar'?'أنشطة الشهر كاملة':'All Monthly Activities'}</h3>
+              <button class="close-btn" data-action="close-att-activities">&times;</button>
+            </div>
+            <div class="modal-body" id="attActivitiesBody" style="max-height:60vh; overflow:auto; text-align:${currentLang==='ar'?'right':'left'};"></div>
+            <div class="modal-footer">
+              <button class="btn" data-action="close-att-activities">${currentLang==='ar'?'تم':'Done'}</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getWorkerProfileView() {
+      const isRTL = currentLang === 'ar';
+      const backIcon = isRTL ? 'fa-arrow-right' : 'fa-arrow-left';
+      const workerInfo = currentWorker || {};
+      const fullName = `${(workerInfo.firstName||'').trim()} ${(workerInfo.lastName||'').trim()}`.trim() || (isRTL ? 'بدون اسم' : 'No name');
+      const dept = (workerInfo.department && workerInfo.department.trim()) || (isRTL ? 'غير محدد' : 'Not specified');
+      const phone = workerInfo.phone || (isRTL ? 'غير متوفر' : 'Not available');
+      const statusKey = workerInfo.status || 'statusActive';
+      const statusLabel = (translations[currentLang] && translations[currentLang][statusKey]) || statusKey;
+      const pinText = workerInfo.pin ? workerInfo.pin : '—';
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; gap: 12px;">
+          <button data-action="navigate" data-view="home" class="btn icon-btn" title="${translations[currentLang].backToHome}"><i class="fas ${backIcon}"></i></button>
+          <h3 style="margin:0; font-weight:800; flex-grow: 1; text-align:${isRTL ? 'right' : 'left'};" data-lang-key="workerCard4">${translations[currentLang].workerCard4}</h3>
+        </div>
+        <div class="card" style="width:100%; max-width:540px; box-sizing:border-box; margin:0 auto; align-items:stretch; text-align:${isRTL?'right':'left'};">
+          <div style="display:flex; align-items:center; gap:14px;">
+            <div style="width:64px; height:64px; border-radius:999px; background:linear-gradient(135deg,#0f766e,#14b8a6); display:flex; align-items:center; justify-content:center; color:#fff; font-size:28px;">
+              <i class="fas fa-user"></i>
+            </div>
+            <div>
+              <div style="font-size:18px; font-weight:900;">${fullName}</div>
+              <div style="font-size:13px; color:var(--muted);">${dept}</div>
+            </div>
+          </div>
+          <div style="margin-top:16px; display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; width:100%; box-sizing:border-box;">
+            <div style="padding:12px; border:1px solid var(--border-color); border-radius:12px; box-sizing:border-box;">
+              <div style="font-size:12px; color:var(--muted);">${translations[currentLang].phoneLabel}</div>
+              <div style="font-weight:800; direction:ltr; text-align:${isRTL?'right':'left'};">${phone}</div>
+            </div>
+            <div style="padding:12px; border:1px solid var(--border-color); border-radius:12px; box-sizing:border-box;">
+              <div style="font-size:12px; color:var(--muted);">${translations[currentLang].departmentLabel}</div>
+              <div style="font-weight:800; word-wrap:break-word;">${dept}</div>
+            </div>
+            <div style="padding:12px; border:1px solid var(--border-color); border-radius:12px; box-sizing:border-box;">
+              <div style="font-size:12px; color:var(--muted);">${translations[currentLang].statusLabel}</div>
+              <div style="font-weight:800;">${statusLabel}</div>
+            </div>
+            <div style="padding:12px; border:1px solid var(--border-color); border-radius:12px; box-sizing:border-box;">
+              <div style="font-size:12px; color:var(--muted);">${currentLang==='ar'?'رمز PIN':'PIN Code'}</div>
+              <div style="font-weight:900; letter-spacing:4px; font-family:ui-monospace;">${pinText}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getAboutView() {
+      const isRTL = currentLang === 'ar';
+      const textAlign = isRTL ? 'right' : 'left';
+      const backIcon = isRTL ? 'fa-arrow-right' : 'fa-arrow-left';
+
+      const appInfo = `
+          <div class="card" style="cursor:default; transform:none; align-items:flex-start; text-align:${textAlign};">
+              <h4 style="margin:0 0 12px; font-weight:800;" data-lang-key="aboutAppTitle">${translations[currentLang].aboutAppTitle}</h4>
+              <p style="margin:0; line-height:1.7;" data-lang-key="aboutAppP1">${translations[currentLang].aboutAppP1}</p>
+              <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color); text-align: center; font-size: 13px; color: var(--muted);" data-lang-key="appVersion">${translations[currentLang].appVersion}</div>
+          </div>
+      `;
+
+      const devInfo = `
+          <div class="card" style="cursor:default; transform:none; align-items:flex-start; text-align:${textAlign}; margin-top: 20px;">
+              <div style="display: flex; align-items: center; gap: 16px; width: 100%;">
+                  <img src="images/billel.png" alt="بلال بورابعة" style="width:80px; height:80px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid var(--border-color);">
+                  <div style="flex-grow: 1;">
+                      <h4 style="margin: 0 0 4px; font-weight:800; font-size: 18px;">${translations[currentLang].aboutDevTitle}</h4>
+                      <p style="margin: 0; color: var(--accent); font-size: 14px; font-weight: 700;">${translations[currentLang].aboutDevSubtitle}</p>
+                  </div>
+              </div>
+              <p style="margin:16px 0 0; line-height:1.7; border-top: 1px solid var(--border-color); padding-top: 16px; width: 100%;">${translations[currentLang].aboutDevBio}</p>
+              
+              <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); width: 100%;">
+                  <h5 style="margin: 0 0 12px; font-size: 14px; color: var(--muted);">${translations[currentLang].contactMe}</h5>
+                  <div style="display: flex; gap: 20px; font-size: 24px;">
+                      <a href="https://www.facebook.com/billel.bouraba" target="_blank" style="color: var(--muted); text-decoration: none;"><i class="fab fa-facebook"></i></a>
+                      <a href="https://www.instagram.com/billel_bouraba/?hl=fr" target="_blank" style="color: var(--muted); text-decoration: none;"><i class="fab fa-instagram"></i></a>
+                      <a href="mailto:billel.dadi123@gmail.com" style="color: var(--muted); text-decoration: none;"><i class="fas fa-envelope"></i></a>
+                  </div>
+              </div>
+          </div>
+      `;
+
+      return `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; gap: 12px;">
+              <button data-action="navigate" data-view="home" class="btn icon-btn" title="${translations[currentLang].backToHome}"><i class="fas ${backIcon}"></i></button>
+              <h3 style="margin:0; font-weight:800; text-align: ${isRTL ? 'right' : 'left'}; flex-grow: 1;" data-lang-key="about">${translations[currentLang].about}</h3>
+          </div>
+          ${appInfo}${devInfo}
+      `;
+    }
+
+    function getSettingsView() {
+      const isRTL = currentLang === 'ar';
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; gap: 12px;">
+            <button data-action="navigate" data-view="home" class="btn icon-btn" title="${translations[currentLang].backToHome}"><i class="fas ${isRTL ? 'fa-arrow-right' : 'fa-arrow-left'}"></i></button>
+            <h3 style="margin:0; font-weight:800; text-align: ${isRTL ? 'right' : 'left'}; flex-grow: 1;" data-lang-key="settings">${translations[currentLang].settings}</h3>
+        </div>
+        
+        <div class="card" style="flex-direction: column; align-items: stretch; text-align: ${isRTL ? 'right' : 'left'}; gap: 0; padding: 8px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px;">
+              <div style="display:flex; align-items:center; gap: 12px;">
+                  <div class="icon" style="width:48px; height:48px; background: linear-gradient(135deg,#3b82f6,#2563eb); font-size: 20px; margin-bottom: 0;"><i class="fas fa-globe"></i></div>
+                  <div style="font-weight:700;" data-lang-key="language">${translations[currentLang].language}</div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn ${currentLang === 'ar' ? '' : 'ghost'}" data-lang="ar" style="padding: 6px 12px;">العربية</button>
+                <button class="btn ${currentLang === 'en' ? '' : 'ghost'}" data-lang="en" style="padding: 6px 12px;">English</button>
+              </div>
+          </div>
+        </div>
+
+        <div data-action="navigate" data-view="themes" class="card" style="flex-direction: row; align-items: center; justify-content: space-between; text-align: ${isRTL ? 'right' : 'left'}; padding: 12px 16px; margin-bottom: 12px;">
+          <div style="display:flex; align-items:center; gap: 12px;">
+              <div class="icon" style="width:48px; height:48px; background: linear-gradient(135deg,#ec4899,#d946ef); font-size: 20px; margin-bottom: 0;"><i class="fas fa-palette"></i></div>
+              <div>
+                <div style="font-weight:700;" data-lang-key="theme">${translations[currentLang].theme}</div>
+                <div style="font-size:13px; color: var(--muted);" data-lang-key="themeSelectionDesc">${translations[currentLang].themeSelectionDesc}</div>
+              </div>
+          </div>
+          <i class="fas fa-chevron-${isRTL ? 'left' : 'right'}" style="color: var(--muted);"></i>
+        </div>
+      `;
+    }
+
+    function getThemesView() {
+      const isRTL = currentLang === 'ar';
+      const lightThemes = Object.keys(themes).filter(key => themes[key].type === 'light');
+      const darkThemes = Object.keys(themes).filter(key => themes[key].type === 'dark');
+      const createThemeCards = (themeKeys) => themeKeys.map(themeKey => {
+          const theme = themes[themeKey];
+          const isActive = themeKey === currentTheme;
+          const themeName = translations[currentLang][theme.nameKey] || themeKey;
+          return `
+              <div class="card theme-card ${isActive ? 'active' : ''}" data-theme="${themeKey}" style="padding: 12px; border-color: ${isActive ? 'var(--accent)' : 'transparent'};">
+                  <div style="display: flex; gap: 8px; width: 100%; height: 40px; margin-bottom: 8px;">
+                      <div style="flex: 1; background-color: ${theme.colors['--bg']}; border-radius: 4px;"></div>
+                      <div style="flex: 2; background-color: ${theme.colors['--card']}; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                          <div style="width: 16px; height: 16px; border-radius: 50%; background-color: ${theme.colors['--primary']};"></div>
+                          <div style="width: 16px; height: 16px; border-radius: 50%; background-color: ${theme.colors['--accent']};"></div>
+                      </div>
+                  </div>
+                  <div style="font-weight: 700; font-size: 12px;">${themeName}</div>
+                  ${isActive ? `<div style="position: absolute; top: 8px; ${isRTL ? 'right' : 'left'}: 8px; color: var(--accent); font-size: 16px;"><i class="fas fa-check-circle"></i></div>` : ''}
+              </div>
+          `;
+      }).join('');
+
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; gap: 12px;">
+            <button data-action="navigate" data-view="settings" class="btn icon-btn" title="${translations[currentLang].backToHome}"><i class="fas ${isRTL ? 'fa-arrow-right' : 'fa-arrow-left'}"></i></button>
+            <h3 style="margin:0; font-weight:800; text-align: ${isRTL ? 'right' : 'left'}; flex-grow: 1;" data-lang-key="theme">${translations[currentLang].theme}</h3>
+        </div>
+
+        <h4 style="margin: 24px 0 12px; font-weight:700;" data-lang-key="lightMode">${translations[currentLang].lightMode}</h4>
+        <div class="grid-cards" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-top: 0;">
+            ${createThemeCards(lightThemes)}
+        </div>
+
+        <h4 style="margin: 24px 0 12px; font-weight:700;" data-lang-key="darkMode">${translations[currentLang].darkMode}</h4>
+        <div class="grid-cards" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-top: 0;">
+            ${createThemeCards(darkThemes)}
+        </div>
+      `;
+    }
+
+    function getWalletView() {
+      const isRTL = currentLang === 'ar';
+      const backIcon = isRTL ? 'fa-arrow-right' : 'fa-arrow-left';
+      // Read stored transactions (إضافات وسحب)
+      let transactions = [];
+      try { transactions = JSON.parse(localStorage.getItem('workerWalletTransactions') || '[]'); } catch (_) { transactions = []; }
+      transactions = Array.isArray(transactions) ? transactions : [];
+      const totalIn = transactions.filter(t => t.type === 'in').reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+      const totalOut = transactions.filter(t => t.type === 'out').reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+      const balance = totalIn - totalOut;
+      const tip = (() => {
+        if (!transactions.length) return currentLang === 'ar'
+          ? 'ابدأ بإضافة أول مبلغ لعرض رصيد محفظتك.'
+          : 'Add your first amount to see your wallet balance.';
+        if (balance < 0) return currentLang === 'ar'
+          ? 'تنبيه: الرصيد بالسالب، راجع عمليات السحب.'
+          : 'Alert: Your balance is negative, review withdrawals.';
+        if (totalOut === 0) return currentLang === 'ar'
+          ? 'جيد، لم تسجل أي سحوبات بعد.'
+          : 'Good, no withdrawals recorded yet.';
+        if (totalOut <= totalIn * 0.3) return currentLang === 'ar'
+          ? 'ممتاز، نسبة السحب مازالت منخفضة.'
+          : 'Great, your withdrawals are still low.';
+        return currentLang === 'ar'
+          ? 'حاول تنظيم السحوبات للحفاظ على رصيد مريح.'
+          : 'Try to control withdrawals to keep a healthy balance.';
+      })();
+      const sortedTx = transactions
+        .slice()
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+        .reverse();
+      const withdrawRatio = totalIn > 0 ? Math.min(100, Math.round((totalOut / totalIn) * 100)) : 0;
+      const historyHtml = sortedTx.length
+        ? sortedTx
+            .slice(0, 3)
+            .map(t => {
+              const isIn = t.type === 'in';
+              const icon = isIn ? 'fa-arrow-down' : 'fa-arrow-up';
+              const bg = isIn ? 'linear-gradient(135deg,#22c55e,#16a34a)' : 'linear-gradient(135deg,#ef4444,#b91c1c)';
+              const title = isIn
+                ? (currentLang === 'ar' ? 'إضافة مال' : 'Money In')
+                : (currentLang === 'ar' ? 'سحب' : 'Withdrawal');
+              const sign = isIn ? '+' : '-';
+              const note = (t.note || '').trim();
+              const date = t.date || '';
+              return `
+                <div class="activity-item" style="margin-bottom:8px;">
+                  <div class="activity-main">
+                    <div class="activity-icon" style="background:${bg}"><i class="fas ${icon}"></i></div>
+                    <div>
+                      <div class="activity-title">${title}</div>
+                      <div class="activity-meta">
+                        ${sign}${(parseFloat(t.amount) || 0).toFixed(2)} DZ${date ? ' — ' + date : ''}${note ? ' — ' + note : ''}
+                      </div>
+                    </div>
+                  </div>
+                </div>`;
+            }).join('')
+        : `<div class="activity-meta">${currentLang === 'ar' ? 'لا توجد عمليات بعد.' : 'No transactions yet.'}</div>`;
+
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; gap: 12px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button data-action="navigate" data-view="home" class="btn icon-btn" title="${translations[currentLang].backToHome}"><i class="fas ${backIcon}"></i></button>
+            <button class="btn icon-btn" id="walletResetBtn" title="${currentLang === 'ar' ? 'إعادة تعيين من الصفر' : 'Reset to zero'}" style="background:var(--accent); color:#fff;">
+              <i class="fas fa-rotate-left"></i>
+            </button>
+          </div>
+          <h3 style="margin:0; font-weight:800; flex-grow: 1; text-align:${isRTL ? 'right' : 'left'};" data-lang-key="workerCard3">${translations[currentLang].workerCard3}</h3>
+          <span></span>
+        </div>
+        <div style="max-width:520px; margin:0 auto;">
+
+        <div class="card" style="margin-bottom:12px; width:100%; text-align:${isRTL ? 'right' : 'left'}; box-sizing:border-box; padding:18px 18px; position:relative; overflow:hidden;">
+          <div style="position:absolute; inset-inline-end:-40px; top:-40px; width:140px; height:140px; opacity:0.10; background:radial-gradient(circle, #0ea5e9, transparent 62%);"></div>
+          <div style="position:relative; z-index:1;">
+            <div style="font-size:13px; color:var(--muted); margin-bottom:4px;">${currentLang === 'ar' ? 'الرصيد الحالي' : 'Current Balance'}</div>
+            <div style="font-size:24px; font-weight:900; color:${balance < 0 ? '#ef4444' : '#0f766e'};">${balance.toFixed(2)} DZ</div>
+            <div style="margin-top:6px; font-size:12px; color:var(--muted); max-width:320px;">${tip}</div>
+            <div style="margin-top:4px; font-size:11px; color:var(--muted);">
+              ${currentLang === 'ar'
+                ? `نسبة السحب من الإيداعات: ${withdrawRatio}%`
+                : `Withdrawals vs deposits: ${withdrawRatio}%`}
+            </div>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; position:relative; z-index:1;">
+            <button class="btn" id="walletOpenAddMoney" style="flex:1; min-width:140px; background:linear-gradient(135deg,#22c55e,#16a34a);">
+              <i class="fas fa-plus-circle"></i> ${currentLang === 'ar' ? 'إضافة مال' : 'Add Money'}
+            </button>
+            <button class="btn ghost" id="walletOpenWithdraw" style="flex:1; min-width:140px;">
+              <i class="fas fa-arrow-up"></i> ${currentLang === 'ar' ? 'تسجيل سحب' : 'Withdraw'}
+            </button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:12px; width:100%; text-align:${isRTL ? 'right' : 'left'}; box-sizing:border-box;">
+          <div style="font-weight:800; margin-bottom:10px;">${currentLang === 'ar' ? 'إيداعات وسحوبات' : 'Deposits & Withdrawals'}</div>
+          <div style="display:flex; flex-wrap:wrap; gap:12px; font-size:13px;">
+            <div style="flex:1; min-width:140px; padding:10px; border-radius:12px; border:1px solid var(--border-color); background:color-mix(in srgb, #22c55e 4%, transparent);">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:var(--muted);">${currentLang === 'ar' ? 'إجمالي الإيداعات' : 'Total Deposits'}</span>
+                <i class="fas fa-arrow-down" style="color:#16a34a;"></i>
+              </div>
+              <div style="margin-top:4px; font-weight:900;">${totalIn.toFixed(2)} DZ</div>
+            </div>
+            <div style="flex:1; min-width:140px; padding:10px; border-radius:12px; border:1px solid var(--border-color); background:color-mix(in srgb, #ef4444 4%, transparent);">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:var(--muted);">${currentLang === 'ar' ? 'إجمالي السحوبات' : 'Total Withdrawals'}</span>
+                <i class="fas fa-arrow-up" style="color:#ef4444;"></i>
+              </div>
+              <div style="margin-top:4px; font-weight:900;">${totalOut.toFixed(2)} DZ</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Money Modal -->
+        <div id="walletAddMoneyModal" class="modal-container" aria-hidden="true">
+          <div class="modal-backdrop" data-action="close-wallet-add"></div>
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 style="margin:0;">${currentLang === 'ar' ? 'إضافة مال إلى المحفظة' : 'Add Money to Wallet'}</h3>
+              <button class="close-btn" data-action="close-wallet-add">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align:${isRTL ? 'right' : 'left'};">
+              <p style="margin-top:0; font-size:13px; color:var(--muted);">
+                ${currentLang === 'ar'
+                  ? 'سجل أي إيداع تقوم به في محفظتك مثل الراتب أو الدخل الإضافي.'
+                  : 'Register any money you add to your wallet like salary or extra income.'}
+              </p>
+              <div class="input-wrap" style="margin-bottom:10px;">
+                <i class="fas fa-tag input-icon-left"></i>
+                <input id="walletInNote" type="text" placeholder="${currentLang === 'ar' ? 'وصف قصير (مثلاً: راتب، سلفة...)' : 'Short note (e.g. salary, advance...)'}" />
+              </div>
+              <div class="input-wrap" style="margin-bottom:10px;">
+                <i class="fas fa-coins input-icon-left"></i>
+                <input id="walletInAmount" type="number" min="0" step="0.01" placeholder="${currentLang === 'ar' ? 'المبلغ (دينار)' : 'Amount (DZ)'}" />
+              </div>
+              <div class="input-wrap">
+                <i class="fas fa-calendar-day input-icon-left"></i>
+                <input id="walletInDate" type="date" />
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn ghost" data-action="close-wallet-add">${currentLang === 'ar' ? 'إلغاء' : 'Cancel'}</button>
+              <button class="btn primary-wide" id="walletAddMoney">
+                <i class="fas fa-check"></i> ${currentLang === 'ar' ? 'تأكيد الإضافة' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Withdraw Money Modal -->
+        <div id="walletWithdrawModal" class="modal-container" aria-hidden="true">
+          <div class="modal-backdrop" data-action="close-wallet-withdraw"></div>
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 style="margin:0;">${currentLang === 'ar' ? 'تسجيل سحب من المحفظة' : 'Register Withdrawal'}</h3>
+              <button class="close-btn" data-action="close-wallet-withdraw">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align:${isRTL ? 'right' : 'left'};">
+              <p style="margin-top:0; font-size:13px; color:var(--muted);">
+                ${currentLang === 'ar'
+                  ? 'سجل كل المبالغ التي تسحبها من المحفظة مثل المصروف اليومي أو الفواتير.'
+                  : 'Register any money you take from the wallet like daily expenses or bills.'}
+              </p>
+              <div class="input-wrap" style="margin-bottom:10px;">
+                <i class="fas fa-tag input-icon-left"></i>
+                <input id="walletOutNote" type="text" placeholder="${currentLang === 'ar' ? 'نوع السحب (مثلاً: مصروف يومي، فاتورة...)' : 'Withdrawal type (e.g. daily expense, bill...)'}" />
+              </div>
+              <div class="input-wrap" style="margin-bottom:10px;">
+                <i class="fas fa-coins input-icon-left"></i>
+                <input id="walletOutAmount" type="number" min="0" step="0.01" placeholder="${currentLang === 'ar' ? 'المبلغ (دينار)' : 'Amount (DZ)'}" />
+              </div>
+              <div class="input-wrap">
+                <i class="fas fa-calendar-day input-icon-left"></i>
+                <input id="walletOutDate" type="date" />
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn ghost" data-action="close-wallet-withdraw">${currentLang === 'ar' ? 'إلغاء' : 'Cancel'}</button>
+              <button class="btn primary-wide" id="walletAddWithdraw">
+                <i class="fas fa-check"></i> ${currentLang === 'ar' ? 'تأكيد السحب' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="width:100%; text-align:${isRTL ? 'right' : 'left'}; box-sizing:border-box;">
+          <div style="font-weight:800; margin-bottom:8px;">${currentLang === 'ar' ? 'سجل العمليات' : 'Transactions History'}</div>
+          <div id="walletHistoryList">
+            ${historyHtml}
+          </div>
+          ${sortedTx.length > 3
+            ? `<div style="margin-top:10px; text-align:center;">
+                 <button class="btn ghost" id="walletShowAll">${currentLang === 'ar' ? 'عرض المزيد' : 'Show More'}</button>
+               </div>`
+            : ''}
+        </div>
+
+        <!-- All transactions modal -->
+        <div id="walletAllModal" class="modal-container" aria-hidden="true">
+          <div class="modal-backdrop" data-action="close-wallet-all"></div>
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 style="margin:0;">${currentLang === 'ar' ? 'جميع عمليات المحفظة' : 'All Wallet Transactions'}</h3>
+              <button class="close-btn" data-action="close-wallet-all">&times;</button>
+            </div>
+            <div class="modal-body" id="walletAllBody" style="max-height:60vh; overflow:auto; text-align:${isRTL ? 'right' : 'left'};"></div>
+            <div class="modal-footer">
+              <button class="btn" data-action="close-wallet-all">${currentLang === 'ar' ? 'تم' : 'Done'}</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wallet reset modal -->
+        <div id="walletResetModal" class="modal-container" aria-hidden="true">
+          <div class="modal-backdrop" data-action="close-wallet-reset"></div>
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 style="margin:0;">${currentLang === 'ar' ? 'إعادة تعيين المحفظة' : 'Reset Wallet'}</h3>
+              <button class="close-btn" data-action="close-wallet-reset">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align:${isRTL ? 'right' : 'left'};">
+              <div class="icon"><i class="fas fa-triangle-exclamation"></i></div>
+              <p>
+                ${currentLang === 'ar'
+                  ? 'سيتم مسح جميع عمليات الإيداع والسحب والبدء من 0. استخدم هذا الخيار فقط عندما تريد فتح صفحة جديدة للمحفظة.'
+                  : 'This will clear all deposits and withdrawals and start again from 0. Use this only when you want a fresh start.'}
+              </p>
+              <p style="font-size:12px; color:var(--muted); margin-top:8px;">
+                ${currentLang === 'ar'
+                  ? 'ملاحظة: بعد إعادة التعيين لا يمكن استرجاع البيانات السابقة.'
+                  : 'Note: After resetting, previous data cannot be restored.'}
+              </p>
+            </div>
+            <div class="modal-footer">
+              <button class="btn ghost" data-action="close-wallet-reset">${currentLang === 'ar' ? 'إلغاء' : 'Cancel'}</button>
+              <button class="btn" id="walletConfirmReset" style="background:#ef4444;">
+                <i class="fas fa-trash"></i> ${currentLang === 'ar' ? 'تأكيد إعادة التعيين' : 'Confirm reset'}
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderView(viewName) {
+      currentView = viewName;
+      let content = '';
+      applyThemeSet(currentTheme);
+      switch(viewName) {
+        case 'pin_login':
+          content = getPinLoginView();
+          if (headerSubtitle) headerSubtitle.textContent = currentLang==='ar' ? 'تسجيل الدخول' : 'Sign in';
+          break;
+        case 'home':
+          content = getHomeView();
+          if(headerSubtitle) headerSubtitle.setAttribute('data-lang-key', 'home');
+          break;
+        case 'attendance':
+          content = getAttendanceView();
+          if(headerSubtitle) headerSubtitle.textContent = translations[currentLang].workerCard2;
+          break;
+        case 'settings':
+          content = getSettingsView();
+          if(headerSubtitle) headerSubtitle.setAttribute('data-lang-key', 'settings');
+          break;
+        case 'wallet':
+          content = getWalletView();
+          if(headerSubtitle) headerSubtitle.setAttribute('data-lang-key', 'workerCard3');
+          break;
+        case 'themes':
+          content = getThemesView();
+          if(headerSubtitle) headerSubtitle.setAttribute('data-lang-key', 'theme');
+          break;
+        case 'info':
+          content = getAboutView();
+          if(headerSubtitle) headerSubtitle.setAttribute('data-lang-key', 'about');
+          break;
+        case 'send_request':
+          if (!currentWorker || !currentWorker.id) {
+            openConfirmModal(
+              currentLang==='ar'
+                ? 'يجب تسجيل الدخول برمز العامل قبل إرسال الطلبات.'
+                : 'You must sign in with your worker PIN before sending requests.',
+              () => renderView('pin_login')
+            );
+            return;
+          }
+          content = getSendRequestView();
+          if (headerSubtitle) headerSubtitle.setAttribute('data-lang-key', 'workerCard1');
+          break;
+        case 'messages_center':
+          if (!currentWorker || !currentWorker.id) {
+            openConfirmModal(currentLang==='ar'?'يرجى تسجيل الدخول للوصول إلى الرسائل.':'Please sign in to access your messages.', () => renderView('pin_login'));
+            return;
+          }
+          workerShowAllMessages = false;
+          content = getMessagesView();
+          if (headerSubtitle) headerSubtitle.textContent = currentLang==='ar' ? 'الرسائل' : 'Messages';
+          break;
+        case 'worker_profile':
+          if (!currentWorker || !currentWorker.id) {
+            openConfirmModal(
+              currentLang==='ar'
+                ? 'يجب تسجيل الدخول برمز العامل للوصول إلى ملفك الشخصي.'
+                : 'You must sign in with your worker PIN to access your profile.',
+              () => renderView('pin_login')
+            );
+            return;
+          }
+          content = getWorkerProfileView();
+          if (headerSubtitle) headerSubtitle.setAttribute('data-lang-key', 'workerCard4');
+          break;
+        default:
+          content = getHomeView();
+          if(headerSubtitle) headerSubtitle.setAttribute('data-lang-key', 'home');
+      }
+      mainContent.innerHTML = `<div class="view-container">${content}</div>`;
+      // After rendering, update dynamic elements like date
+      if (viewName === 'home') {
+        updateDate();
+        refreshWorkerRequestIndicator();
+        refreshWorkerMessagesIndicator();
+        syncCurrentWorkerFromServer({ silent: true });
+        const btn = document.getElementById('workerHomeRefresh');
+        if (btn) {
+          btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            try {
+              await syncCurrentWorkerFromServer({ silent: true });
+              refreshWorkerRequestIndicator();
+              refreshWorkerMessagesIndicator();
+              updateDate();
+              showWorkerToast(currentLang==='ar'?'تم تحديث الصفحة.':'Home refreshed.');
+            } finally {
+              btn.disabled = false;
+            }
+          });
+        }
+        const globalBtn = document.getElementById('workerGlobalSearchBtn');
+        if (globalBtn && workerSearchModal && workerSearchInput && workerSearchResults && workerSearchSubmit) {
+          const runSearch = () => {
+            const term = (workerSearchInput.value || '').trim();
+            const isAr = currentLang==='ar';
+            if (!term) {
+              workerSearchResults.textContent = isAr
+                ? 'اكتب كلمة في مربع البحث ثم اضغط زر بحث.'
+                : 'Type a word in the box then press Search.';
+              return;
+            }
+            const q = term.toLowerCase();
+            const reqMatches = (cachedRequests||[]).filter(r =>
+              (`${r.typeKey||''} ${r.notes||''} ${r.managerReply||''}`).toLowerCase().includes(q)
+            );
+            const msgMatches = (workerMessagesCache||[]).filter(m =>
+              (`${m.managerMessage||''} ${m.workerReply||''}`).toLowerCase().includes(q)
+            );
+            if (!reqMatches.length && !msgMatches.length) {
+              workerSearchResults.textContent = isAr ? 'لا توجد نتائج مطابقة.' : 'No matching results.';
+              return;
+            }
+            const parts = [];
+            if (reqMatches.length) {
+              parts.push(`<strong>${isAr?'طلباتك':'Your requests'}</strong>`);
+              parts.push('<ul>'+reqMatches.slice(0,5).map(r=>{
+                const label = translations[currentLang][r.typeKey] || r.typeKey;
+                return `<li>${label} · ${(r.status||'pending')}</li>`;
+              }).join('')+'</ul>');
+            }
+            if (msgMatches.length) {
+              parts.push(`<strong>${isAr?'رسائلك':'Your messages'}</strong>`);
+              parts.push('<ul>'+msgMatches.slice(0,5).map(m=>{
+                const text = m.managerMessage || m.workerReply || '';
+                return `<li>${text}</li>`;
+              }).join('')+'</ul>');
+            }
+            workerSearchResults.innerHTML = parts.join('');
+          };
+
+          globalBtn.addEventListener('click', () => {
+            workerSearchModal.classList.add('visible');
+            const isAr = currentLang==='ar';
+            const titleEl = workerSearchModal.querySelector('.modal-header h3');
+            const descEl = workerSearchModal.querySelector('.modal-body p');
+            if (titleEl) titleEl.textContent = isAr ? 'بحث في التطبيق' : 'Search in app';
+            if (descEl) descEl.textContent = isAr
+              ? 'اكتب كلمة للبحث في طلباتك ورسائلك. سيتم عرض أول النتائج المطابقة فقط.'
+              : 'Type a word to search through your requests and messages. Only the first matching results will be shown.';
+            if (workerSearchInput) {
+              workerSearchInput.placeholder = isAr
+                ? 'مثال: غياب، عطلة، رسالة...'
+                : 'Example: absence, vacation, message...';
+              workerSearchInput.value = '';
+            }
+            if (workerSearchResults) {
+              workerSearchResults.textContent = isAr
+                ? 'اكتب كلمة في مربع البحث ثم اضغط زر بحث.'
+                : 'Type a word in the box then press Search.';
+            }
+            if (workerSearchSubmit) {
+              workerSearchSubmit.textContent = isAr ? 'بحث' : 'Search';
+            }
+            if (workerSearchCloseBtn) {
+              workerSearchCloseBtn.textContent = isAr ? 'إغلاق' : 'Close';
+            }
+            setTimeout(()=> workerSearchInput.focus(), 80);
+          });
+          workerSearchSubmit.addEventListener('click', runSearch);
+          workerSearchInput.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter') {
+              ev.preventDefault();
+              runSearch();
+            }
+          });
+          workerSearchModal.addEventListener('click', (e) => {
+            if (e.target.closest('[data-action=\"close-worker-search\"]')) {
+              workerSearchModal.classList.remove('visible');
+            }
+          });
+        }
+      }
+      // Apply translations to the newly rendered content
+      document.querySelectorAll('[data-lang-key]').forEach(el => {
+        const key = el.getAttribute('data-lang-key');
+        if (translations[currentLang] && translations[currentLang][key]) {
+          el.textContent = translations[currentLang][key];
+        }
+      });
+      applyWorkerIndicators();
+
+      if (viewName === 'pin_login') {
+        const form = document.getElementById('pinLoginForm');
+        const pinInput = document.getElementById('pinInput');
+        const errorEl = document.getElementById('pinLoginError');
+        const errorTemplate = document.getElementById('pinLoginErrorTemplate');
+        form?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          if (!pinInput) return;
+          const pin = (pinInput.value || '').trim();
+          if (pin.length !== 4) {
+            errorEl.textContent = currentLang==='ar'?'يرجى إدخال 4 أرقام.':'Please enter 4 digits.';
+            errorEl.style.display = 'block';
+            return;
+          }
+          errorEl.style.display = 'none';
+          const btn = form.querySelector('button[type="submit"]');
+          const original = btn ? btn.textContent : '';
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = currentLang==='ar'?'جاري التحقق...':'Checking...';
+          }
+          try {
+            const workerData = await loginWithPin(pin);
+            currentWorker = {
+              id: workerData.id,
+              firstName: workerData.firstName || '',
+              lastName: workerData.lastName || '',
+              phone: workerData.phone || '',
+              department: workerData.department || '',
+              status: workerData.status || 'statusActive',
+              managerEmail: workerData.managerEmail || '',
+              name: `${(workerData.firstName||'').trim()} ${(workerData.lastName||'').trim()}`.trim(),
+              pin
+            };
+            localStorage.setItem('nedjmaWorker', JSON.stringify(currentWorker));
+            try { localStorage.setItem(WORKER_STATUS_ACK_KEY, currentWorker.status); } catch (_) {}
+            workerStatusAlert = false;
+            applyWorkerIndicators();
+            refreshWorkerRequestIndicator();
+            document.querySelectorAll('.nav-item').forEach(item => {
+              item.classList.toggle('active', item.dataset.view === 'home');
+            });
+            showWorkerToast(currentLang==='ar'?'تم تسجيل الدخول بنجاح.':'Signed in successfully.');
+            renderView('home');
+            moveIndicator(document.querySelector('.nav-item[data-view="home"]'));
+            updateProfileIcon();
+            refreshWorkerRequestIndicator();
+            refreshWorkerMessagesIndicator();
+          } catch (err) {
+            console.error(err);
+            const msg = errorTemplate ? errorTemplate.textContent : (currentLang==='ar'?'رمز PIN غير صحيح. حاول مرة أخرى.':'Invalid PIN. Please try again.');
+            errorEl.textContent = msg;
+            errorEl.style.display = 'block';
+          } finally {
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = original || (currentLang==='ar'?'تسجيل الدخول':'Sign in');
+            }
+          }
+        });
+        return;
+      }
+
+      // Attendance view handlers
+      if (viewName === 'attendance') {
+        const today = new Date();
+        const monthKey = () => {
+          const m = window.__attMonth || new Date(today.getFullYear(), today.getMonth(), 1);
+          return `attendance_${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,'0')}`;
+        };
+        const read = () => JSON.parse(localStorage.getItem(monthKey())||'{}');
+        const write = (d) => localStorage.setItem(monthKey(), JSON.stringify(d));
+
+        document.getElementById('attPrev')?.addEventListener('click', ()=>{ const m=window.__attMonth; window.__attMonth=new Date(m.getFullYear(), m.getMonth()-1,1); renderView('attendance'); });
+        document.getElementById('attNext')?.addEventListener('click', ()=>{ const m=window.__attMonth; window.__attMonth=new Date(m.getFullYear(), m.getMonth()+1,1); renderView('attendance'); });
+        // Print current month to PDF using browser print
+        document.getElementById('attPrint')?.addEventListener('click', ()=>{
+          const m = window.__attMonth || new Date();
+          const yyyy = m.getFullYear();
+          const mm = String(m.getMonth()+1).padStart(2,'0');
+          const key = `attendance_${yyyy}-${mm}`;
+          const data = JSON.parse(localStorage.getItem(key)||'{}');
+          const days = data.days||{}; const times = data.times||{};
+          const lastDay = new Date(yyyy, m.getMonth()+1, 0).getDate();
+          const locale = currentLang==='ar'?'ar-DZ':'en-US';
+          const monthLabel = m.toLocaleDateString(locale,{month:'long',year:'numeric'});
+          const rows = [];
+          for(let d=1; d<=lastDay; d++){
+            const ds = `${yyyy}-${mm}-${String(d).padStart(2,'0')}`;
+            const st = days[ds]||'';
+            const t = times[ds]||{};
+            const statusText = st==='present' ? (currentLang==='ar'?'حاضر':'Present') : st==='absent' ? (currentLang==='ar'?'غائب':'Absent') : '';
+            rows.push(`<tr>
+              <td>${d}</td>
+              <td>${statusText}</td>
+              <td>${t.in||''}</td>
+              <td>${t.out||''}</td>
+            </tr>`);
+          }
+          const presentCount = Object.values(days).filter(v=>v==='present').length;
+          const absentCount = Object.values(days).filter(v=>v==='absent').length;
+          const workingDays = (()=>{ let c=0; for(let d=1; d<=lastDay; d++){ const wd=new Date(yyyy, m.getMonth(), d).getDay(); if(wd!==5) c++; } return c; })();
+          const css = `
+            <style>
+              @page { size: A4; margin: 14mm; }
+              body{ font-family: 'Tajawal', sans-serif; color:#111827; }
+              h1{ margin:0 0 10px; font-size:22px; }
+              .meta{ color:#6b7280; margin-bottom:12px; }
+              table{ width:100%; border-collapse:collapse; }
+              th,td{ border:1px solid #e5e7eb; padding:8px; font-size:12px; }
+              th{ background:#f9fafb; text-align:center; }
+              td:nth-child(2){ text-align:center; font-weight:800; }
+              .footer{ margin-top:12px; display:flex; gap:10px; }
+              .box{ border:1px solid #e5e7eb; padding:8px 10px; border-radius:8px; font-size:12px; }
+            </style>`;
+          const html = `<!DOCTYPE html><html lang="${currentLang}" dir="${currentLang==='ar'?'rtl':'ltr'}"><head><meta charset='utf-8'>${css}</head><body>
+            <h1>${currentLang==='ar'?'تقرير الحضور الشهري':'Monthly Attendance Report'}</h1>
+            <div class='meta'>${monthLabel}</div>
+            <table>
+              <thead><tr><th>${currentLang==='ar'?'اليوم':'Day'}</th><th>${currentLang==='ar'?'الحالة':'Status'}</th><th>${currentLang==='ar'?'الدخول':'In'}</th><th>${currentLang==='ar'?'الخروج':'Out'}</th></tr></thead>
+              <tbody>${rows.join('')}</tbody>
+            </table>
+            <div class='footer'>
+              <div class='box'>${currentLang==='ar'?'الحضور':'Present'}: ${presentCount}</div>
+              <div class='box'>${currentLang==='ar'?'الغياب':'Absent'}: ${absentCount}</div>
+              <div class='box'>${currentLang==='ar'?'أيام العمل':'Working days'}: ${workingDays}</div>
+            </div>
+          </body></html>`;
+          const w = window.open('', '_blank');
+          if (!w) return;
+          w.document.open(); w.document.write(html); w.document.close();
+          setTimeout(()=>{ w.focus(); w.print(); }, 300);
+        });
+
+        const pad2 = (n) => String(n).padStart(2,'0');
+        const localKey = (d) => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+        let selected = null;
+        document.querySelectorAll('.att-day').forEach(el=>{
+          if (el.classList.contains('muted')) return;
+          el.addEventListener('click', ()=>{
+            document.querySelectorAll('.att-day').forEach(x=>x.style.outline='none');
+            el.style.outline = '2px solid var(--accent)';
+            selected = el.getAttribute('data-att-day');
+          });
+          el.addEventListener('dblclick', ()=>{
+            // quick toggle present/absent
+            const d = read(); d.days = d.days||{}; const k = el.getAttribute('data-att-day');
+            const cur = d.days[k]; d.days[k] = cur==='present' ? 'absent' : 'present'; write(d); renderView('attendance');
+          });
+        });
+
+        // Auto-select today's date if visible
+        const todayEl = document.querySelector('.att-day.today');
+        if (todayEl) { selected = todayEl.getAttribute('data-att-day'); todayEl.style.outline='2px solid var(--accent)'; }
+
+        // Confirmation modal for Work Day with optional time in/out
+        const markPresent = document.getElementById('markPresent');
+        const confirmModal = document.getElementById('attConfirmModal');
+        const confirmBtn = document.getElementById('attConfirmBtn');
+        const timeInEl = document.getElementById('attTimeIn');
+        const timeOutEl = document.getElementById('attTimeOut');
+        const openConfirm = ()=>{ confirmModal?.classList.add('visible'); };
+        const closeConfirm = ()=>{ confirmModal?.classList.remove('visible'); };
+        markPresent?.addEventListener('click', ()=>{ if(!selected){ selected=localKey(new Date()); } openConfirm(); });
+        confirmBtn?.addEventListener('click', ()=>{
+          const d=read(); d.days=d.days||{}; d.times=d.times||{}; d.days[selected]='present';
+          const tin = timeInEl?.value?.trim(); const tout = timeOutEl?.value?.trim();
+          if (tin || tout) {
+            d.times[selected] = { in: tin||'', out: tout||'' };
+          } else if (d.times[selected]) {
+            delete d.times[selected];
+          }
+          write(d); closeConfirm(); renderView('attendance');
+        });
+        confirmModal?.addEventListener('click', (e)=>{ if(e.target.closest('[data-action="close-att-confirm"]')) closeConfirm(); });
+        const markAbsent = document.getElementById('markAbsent');
+        markAbsent?.addEventListener('click', ()=>{ if(!selected){ selected=localKey(new Date()); } const d=read(); d.days=d.days||{}; d.days[selected]='absent'; write(d); renderView('attendance'); });
+        const clearDay = document.getElementById('clearDay');
+        clearDay?.addEventListener('click', ()=>{
+          if(!selected){ selected=localKey(new Date()); }
+          const d=read();
+          if(d.days){ delete d.days[selected]; }
+          if(d.times && d.times[selected]){ delete d.times[selected]; }
+          write(d); renderView('attendance');
+        });
+
+        // Show all activities in modal
+        const showMore = document.getElementById('showAllActivities');
+        const modal = document.getElementById('attActivitiesModal');
+        const body = document.getElementById('attActivitiesBody');
+        const buildItems = () => {
+          const d = read();
+          const items = [];
+          Object.entries(d.days||{}).forEach(([k,v])=>{
+            const tinfo = (d.times && d.times[k]) ? d.times[k] : null;
+            items.push({date:k,type:v,tinfo});
+          });
+          items.sort((a,b)=> a.date.localeCompare(b.date));
+          if (!items.length) return `<div class="activity-meta">${currentLang==='ar'?'لا توجد أنشطة مسجلة.':'No activities yet.'}</div>`;
+          return items.map(a=>{
+            const isPresent = a.type==='present';
+            const icon = isPresent ? 'fa-check-circle' : 'fa-user-slash';
+            const bg = isPresent ? 'linear-gradient(135deg,#10b981,#059669)' : 'linear-gradient(135deg,#ef4444,#b91c1c)';
+            const title = isPresent ? (currentLang==='ar'?'حضور':'Present') : (currentLang==='ar'?'غياب':'Absent');
+            const chip = isPresent ? (currentLang==='ar'?'حاضر':'Present') : (currentLang==='ar'?'غائب':'Absent');
+            const times = a.tinfo ? ` — ${currentLang==='ar'?'من':'In'} ${a.tinfo.in||'-'} ${currentLang==='ar'?'إلى':'Out'} ${a.tinfo.out||'-'}` : '';
+            return `
+              <div class="activity-item">
+                <div class="activity-main">
+                  <div class="activity-icon" style="background:${bg}"><i class="fas ${icon}"></i></div>
+                  <div>
+                    <div class="activity-title">${title}</div>
+                    <div class="activity-meta">${a.date}${times}</div>
+                  </div>
+                </div>
+                <div class="status-chip">${chip}</div>
+              </div>`;
+          }).join('');
+        };
+        showMore?.addEventListener('click', ()=>{ if(body){ body.innerHTML = buildItems(); } modal?.classList.add('visible'); });
+        modal?.addEventListener('click', (e)=>{ if(e.target.closest('[data-action="close-att-activities"]')) modal.classList.remove('visible'); });
+
+        // Reward/Deduction/DailyRate removed as requested
+      }
+      if (viewName === 'messages_center') {
+        renderWorkerMessages();
+      }
+      if (viewName === 'worker_profile') {
+        acknowledgeWorkerStatus();
+      }
+
+      // Wallet view handlers
+      if (viewName === 'wallet') {
+        const refreshWallet = () => renderView('wallet');
+        const openAddBtn = document.getElementById('walletOpenAddMoney');
+        const openWithdrawBtn = document.getElementById('walletOpenWithdraw');
+        const addModal = document.getElementById('walletAddMoneyModal');
+        const withdrawModal = document.getElementById('walletWithdrawModal');
+        const allModal = document.getElementById('walletAllModal');
+        const allBody = document.getElementById('walletAllBody');
+        const showAllBtn = document.getElementById('walletShowAll');
+        const resetBtn = document.getElementById('walletResetBtn');
+        const resetModal = document.getElementById('walletResetModal');
+        const confirmResetBtn = document.getElementById('walletConfirmReset');
+
+        const inNote = document.getElementById('walletInNote');
+        const inAmount = document.getElementById('walletInAmount');
+        const inDate = document.getElementById('walletInDate');
+        const outNote = document.getElementById('walletOutNote');
+        const outAmount = document.getElementById('walletOutAmount');
+        const outDate = document.getElementById('walletOutDate');
+        const addMoneyBtn = document.getElementById('walletAddMoney');
+        const addWithdrawBtn = document.getElementById('walletAddWithdraw');
+
+        const loadTx = () => {
+          try { return JSON.parse(localStorage.getItem('workerWalletTransactions') || '[]') || []; }
+          catch (_) { return []; }
+        };
+        const saveTx = (arr) => {
+          try { localStorage.setItem('workerWalletTransactions', JSON.stringify(arr)); } catch (_) {}
+        };
+
+        const openModal = (el) => el && el.classList.add('visible');
+        const closeModal = (el) => el && el.classList.remove('visible');
+
+        openAddBtn?.addEventListener('click', () => openModal(addModal));
+        openWithdrawBtn?.addEventListener('click', () => openModal(withdrawModal));
+
+        addModal?.addEventListener('click', (e) => {
+          if (e.target.closest('[data-action="close-wallet-add"]')) closeModal(addModal);
+        });
+        withdrawModal?.addEventListener('click', (e) => {
+          if (e.target.closest('[data-action="close-wallet-withdraw"]')) closeModal(withdrawModal);
+        });
+        allModal?.addEventListener('click', (e) => {
+          if (e.target.closest('[data-action="close-wallet-all"]')) closeModal(allModal);
+        });
+        resetModal?.addEventListener('click', (e) => {
+          if (e.target.closest('[data-action="close-wallet-reset"]')) closeModal(resetModal);
+        });
+
+        const renderAllTx = () => {
+          if (!allBody) return;
+          const tx = (function(){
+            try { return JSON.parse(localStorage.getItem('workerWalletTransactions') || '[]') || []; }
+            catch (_) { return []; }
+          })()
+          .slice()
+          .sort((a,b)=>(a.createdAt||0)-(b.createdAt||0))
+          .reverse();
+          if (!tx.length) {
+            allBody.innerHTML = `<div class="activity-meta">${currentLang==='ar'?'لا توجد عمليات بعد.':'No transactions yet.'}</div>`;
+            return;
+          }
+          allBody.innerHTML = tx.map(t=>{
+            const isIn = t.type==='in';
+            const icon = isIn ? 'fa-arrow-down' : 'fa-arrow-up';
+            const bg = isIn ? 'linear-gradient(135deg,#22c55e,#16a34a)' : 'linear-gradient(135deg,#ef4444,#b91c1c)';
+            const title = isIn
+              ? (currentLang==='ar'?'إضافة مال':'Money In')
+              : (currentLang==='ar'?'سحب':'Withdrawal');
+            const sign = isIn ? '+' : '-';
+            const note = (t.note||'').trim();
+            const date = t.date||'';
+            return `
+              <div class="activity-item">
+                <div class="activity-main">
+                  <div class="activity-icon" style="background:${bg}"><i class="fas ${icon}"></i></div>
+                  <div>
+                    <div class="activity-title">${title}</div>
+                    <div class="activity-meta">
+                      ${sign}${(parseFloat(t.amount)||0).toFixed(2)} DZ${date ? ' — ' + date : ''}${note ? ' — ' + note : ''}
+                    </div>
+                  </div>
+                </div>
+              </div>`;
+          }).join('');
+        };
+
+        showAllBtn?.addEventListener('click', () => {
+          renderAllTx();
+          openModal(allModal);
+        });
+
+        resetBtn?.addEventListener('click', () => {
+          openModal(resetModal);
+        });
+
+        confirmResetBtn?.addEventListener('click', () => {
+          try { localStorage.removeItem('workerWalletTransactions'); } catch (_) {}
+          closeModal(resetModal);
+          refreshWallet();
+        });
+
+        addMoneyBtn?.addEventListener('click', () => {
+          const amt = inAmount && 'value' in inAmount ? parseFloat(inAmount.value || '0') : 0;
+          if (!amt || isNaN(amt)) return;
+          const note = inNote && 'value' in inNote ? inNote.value.trim() : '';
+          const dt = inDate && 'value' in inDate ? inDate.value : '';
+          const tx = loadTx();
+          tx.push({ type:'in', amount: amt, note, date: dt, createdAt: Date.now() });
+          saveTx(tx);
+          if (inNote && 'value' in inNote) inNote.value = '';
+          if (inAmount && 'value' in inAmount) inAmount.value = '';
+          if (inDate && 'value' in inDate) inDate.value = '';
+          closeModal(addModal);
+          refreshWallet();
+        });
+
+        addWithdrawBtn?.addEventListener('click', () => {
+          const amt = outAmount && 'value' in outAmount ? parseFloat(outAmount.value || '0') : 0;
+          if (!amt || isNaN(amt)) return;
+          const note = outNote && 'value' in outNote ? outNote.value.trim() : '';
+          const dt = outDate && 'value' in outDate ? outDate.value : '';
+          const tx = loadTx();
+          tx.push({ type:'out', amount: amt, note, date: dt, createdAt: Date.now() });
+          saveTx(tx);
+          if (outNote && 'value' in outNote) outNote.value = '';
+          if (outAmount && 'value' in outAmount) outAmount.value = '';
+          if (outDate && 'value' in outDate) outDate.value = '';
+          closeModal(withdrawModal);
+          refreshWallet();
+        });
+      }
+
+      const loadRequestsAsync = async () => {
+        if (!currentWorker || !currentWorker.id) return [];
+        const items = await fetchWorkerRequests(currentWorker.id);
+        cachedRequests = items;
+        return items;
+      };
+
+      const renderRequests = async () => {
+        const list = document.getElementById('requestsList');
+        if (!list) return;
+        const items = await loadRequestsAsync();
+        evaluateWorkerRequestAlerts(items, { markSeen: true });
+        if (!items.length) {
+          list.innerHTML = `<div style="text-align:center; padding:32px; color: var(--muted);" data-lang-key="noRequestsYet">${translations[currentLang].noRequestsYet}</div>`;
+          return;
+        }
+        const formatDate = (value) => {
+          if (!value) return '';
+          if (typeof value === 'string') return value;
+          if (value.toDate) {
+            const d = value.toDate();
+            return d.toISOString().split('T')[0];
+          }
+          return '';
+        };
+        const cards = items.map(item => {
+          const iconMap = {
+            typeAbsence: { ic: 'fa-calendar-times', bg: 'linear-gradient(135deg,#f97316,#ea580c)' },
+            typeVacation:{ ic: 'fa-umbrella-beach', bg: 'linear-gradient(135deg,#06b6d4,#0284c7)' },
+            typeComplaint:{ ic: 'fa-gavel', bg: 'linear-gradient(135deg,#64748b,#475569)' },
+            typeNote:    { ic: 'fa-sticky-note', bg: 'linear-gradient(135deg,#a855f7,#7c3aed)' },
+            typeDocument:{ ic: 'fa-file-alt', bg: 'linear-gradient(135deg,#10b981,#059669)' }
+          };
+          const meta = iconMap[item.typeKey] || iconMap.typeNote;
+          const statusMeta = statusMap[item.status] || statusMap.pending;
+          const statusLabel = currentLang==='ar' ? statusMeta.ar : statusMeta.en;
+          const statusIcon = item.status === 'approved' ? 'fa-circle-check' : item.status === 'rejected' ? 'fa-circle-xmark' : 'fa-clock';
+          const statusChip = `<span class="rc-status-chip" style="background:${statusMeta.bg}; color:${statusMeta.color};"><i class="fas ${statusIcon}"></i>${statusLabel}</span>`;
+          const requestDateLabel = formatDate(item.requestDate) || '';
+          const absenceHtml = item.absenceDate ? `<div class="rc-meta">${translations[currentLang].absenceDate}: ${item.absenceDate}</div>` : '';
+          const vacationHtml = (item.vacStart || item.vacEnd) ? `<div class="rc-meta">${translations[currentLang].vacationStart}: ${item.vacStart || ''} — ${translations[currentLang].vacationEnd}: ${item.vacEnd || ''}</div>` : '';
+          const notePills = [];
+          if (item.absenceDate) notePills.push(`<span><i class="fas fa-calendar-day" style="margin-inline-end:6px;"></i>${item.absenceDate}</span>`);
+          if (item.vacStart || item.vacEnd) notePills.push(`<span><i class="fas fa-plane-departure" style="margin-inline-end:6px;"></i>${item.vacStart || '-'} → ${item.vacEnd || '-'}</span>`);
+          const requestPill = requestDateLabel ? `<span><i class="fas fa-hourglass-half" style="margin-inline-end:6px;"></i>${requestDateLabel}</span>` : '';
+          const pillsHtml = (notePills.length || requestPill) ? `<div class="rc-row">${requestPill}${notePills.join('')}</div>` : '';
+          const notesHtml = item.notes ? `<div class="rc-notes">${item.notes}</div>` : '';
+          const replyHtml = item.managerReply ? `<div class="rc-notes" style="background:rgba(249,115,22,.08); border:1px dashed rgba(249,115,22,.25); color:var(--accent);">${item.managerReply}</div>` : '';
+          const decidedAt = item.decidedAt && item.decidedAt.toDate ? item.decidedAt.toDate().toISOString().split('T')[0] : '';
+          const timelineLabel = item.status === 'pending'
+            ? `${currentLang==='ar'?'أُرسل في':'Sent on'} ${requestDateLabel}`
+            : decidedAt
+              ? `${currentLang==='ar'?'آخر تحديث':'Last update'} ${decidedAt}`
+              : `${currentLang==='ar'?'الحالة الحالية':'Current status'}`;
+          return `
+            <article class="card request-card" data-action="preview-request" data-id="${item.id}" style="text-align:${(currentLang==='ar')?'right':'left'};">
+              <div class="rc-header">
+                <div class="rc-title">
+                  <div class="rc-icon" style="background:${meta.bg}"><i class="fas ${meta.ic}"></i></div>
+                  <div>
+                    <div style="font-size:15px;">${translations[currentLang][item.typeKey]}</div>
+                    <div class="rc-meta">${translations[currentLang].requestDate}: ${requestDateLabel}</div>
+                  </div>
+                </div>
+                <div class="rc-actions">
+                  ${statusChip}
+                </div>
+              </div>
+              <div class="rc-body">
+                ${absenceHtml}${vacationHtml}${pillsHtml}${notesHtml}${replyHtml}
+              </div>
+              <div class="rc-footer">
+                <div class="rc-timeline"><i class="fas fa-clock"></i>${timelineLabel}</div>
+                <div class="rc-actions">
+                  <button class="btn ghost" data-action="delete-request" data-id="${item.id}" data-status="${item.status}" title="${currentLang==='ar'?'حذف':'Delete'}"><i class="fas fa-trash"></i></button>
+                </div>
+              </div>
+            </article>`;
+        }).join('');
+        list.innerHTML = `<div class="requests-feed">${cards}</div>`;
+      };
+// Wire up request modal interactions
+      const requestModal = document.getElementById('requestModal');
+      const openBtn = document.getElementById('openRequestModal');
+      if (openBtn && requestModal) {
+        openBtn.addEventListener('click', () => requestModal.classList.add('visible'));
+        requestModal.addEventListener('click', (e) => {
+          if (e.target.closest('[data-action="close-request-modal"]')) {
+            requestModal.classList.remove('visible');
+          }
+        });
+        // default select first type
+        const typeButtons = requestModal.querySelectorAll('.type-option');
+        let selectedType = 'absence';
+        // Initial render of saved requests
+        renderRequests();
+        const extraFields = requestModal.querySelector('#extraDateFields');
+        const absenceGroup = requestModal.querySelector('#absenceDateGroup');
+        const vacationGroup = requestModal.querySelector('#vacationDatesGroup');
+        const updateExtraFields = () => {
+          if (!extraFields || !absenceGroup || !vacationGroup) return;
+          extraFields.style.display = 'block';
+          absenceGroup.style.display = 'none';
+          vacationGroup.style.display = 'none';
+          if (selectedType === 'absence') {
+            absenceGroup.style.display = 'block';
+          } else if (selectedType === 'vacation') {
+            vacationGroup.style.display = 'block';
+          } else {
+            extraFields.style.display = 'none';
+          }
+        };
+        typeButtons.forEach((btn, idx) => {
+          if (idx === 0) btn.classList.add('active');
+          btn.addEventListener('click', () => {
+            typeButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedType = btn.dataset.type;
+            updateExtraFields();
+          });
+        });
+        updateExtraFields();
+        const submitBtn = document.getElementById('submitRequestBtn');
+        submitBtn?.addEventListener('click', async () => {
+          if (!currentWorker || !currentWorker.id) {
+            openConfirmModal(currentLang==='ar' ? 'يجب تسجيل الدخول برمز العامل قبل إرسال طلب.' : 'Please sign in with your worker PIN before sending requests.', () => renderView('pin_login'));
+            return;
+          }
+          const dateInput = document.getElementById('requestDateInput');
+          const notesInput = document.getElementById('requestNotes');
+          const dateVal = dateInput && 'value' in dateInput ? dateInput.value : '';
+          const notesVal = notesInput && 'value' in notesInput ? notesInput.value : '';
+          const absenceDateEl = document.getElementById('absenceDateInput');
+          const vacStartEl = document.getElementById('vacStartInput');
+          const vacEndEl = document.getElementById('vacEndInput');
+          const absenceVal = absenceDateEl && 'value' in absenceDateEl ? absenceDateEl.value : '';
+          const vacStartVal = vacStartEl && 'value' in vacStartEl ? vacStartEl.value : '';
+          const vacEndVal = vacEndEl && 'value' in vacEndEl ? vacEndEl.value : '';
+          const typeKey = selectedType === 'absence' ? 'typeAbsence'
+                         : selectedType === 'vacation' ? 'typeVacation'
+                         : selectedType === 'complaint' ? 'typeComplaint'
+                         : selectedType === 'document' ? 'typeDocument'
+                         : 'typeNote';
+          const fullName = `${(currentWorker.firstName||'').trim()} ${(currentWorker.lastName||'').trim()}`.trim();
+          const payload = {
+            workerId: currentWorker.id,
+            workerName: fullName || (currentLang==='ar'?'بدون اسم':'No name'),
+            department: currentWorker.department || '',
+            typeKey,
+            status: 'pending',
+            requestDate: dateVal || new Date().toISOString().split('T')[0],
+            absenceDate: absenceVal,
+            vacStart: vacStartVal,
+            vacEnd: vacEndVal,
+            notes: notesVal || '',
+            managerReply: ''
+          };
+          const ok = await submitWorkerRequest(payload);
+          if (ok) {
+            requestModal.classList.remove('visible');
+            openConfirmModal(currentLang==='ar'?'تم إرسال طلبك وسيتم مراجعته من الإدارة.':'Your request was sent and will be reviewed by the manager.', ()=>{});
+            showWorkerToast(currentLang==='ar'?'تم إرسال الطلب.':'Request sent.');
+            renderRequests();
+          } else {
+            openConfirmModal(currentLang==='ar'?'تعذر إرسال الطلب حالياً.':'Unable to send the request right now.', ()=>{});
+          }
+        });
+
+                // Delete and preview handlers for requests
+        document.addEventListener('click', (e) => {
+          const delBtn = e.target.closest && e.target.closest('[data-action="delete-request"]');
+          if (delBtn) {
+            const id = delBtn.getAttribute('data-id');
+            const msg = currentLang==='ar' ? 'هل تريد حذف هذا الطلب؟' : 'Delete this request?';
+            openConfirmModal(msg, () => { deleteWorkerRequest(id).then(renderRequests); });
+            return;
+          }
+          const cardEl = e.target.closest && e.target.closest('[data-action="preview-request"]');
+          if (cardEl) {
+            const id = cardEl.getAttribute('data-id');
+            const it = cachedRequests.find(x=>x.id===id);
+            if (!it) return;
+            const iconMap = {
+              typeAbsence: { ic: 'fa-calendar-times', bg: 'linear-gradient(135deg,#f97316,#ea580c)' },
+              typeVacation:{ ic: 'fa-umbrella-beach', bg: 'linear-gradient(135deg,#06b6d4,#0284c7)' },
+              typeComplaint:{ ic: 'fa-gavel', bg: 'linear-gradient(135deg,#64748b,#475569)' },
+              typeNote:    { ic: 'fa-sticky-note', bg: 'linear-gradient(135deg,#a855f7,#7c3aed)' },
+              typeDocument:{ ic: 'fa-file-alt', bg: 'linear-gradient(135deg,#10b981,#059669)' }
+            };
+            const meta = iconMap[it.typeKey] || iconMap.typeNote;
+            const statusMeta = statusMap[it.status] || statusMap.pending;
+            const statusLabel = currentLang==='ar' ? statusMeta.ar : statusMeta.en;
+            const pvTitle = document.getElementById('previewTitle');
+            const pvBody = document.getElementById('previewBody');
+            if (pvTitle) pvTitle.textContent = translations[currentLang][it.typeKey];
+            if (pvBody) pvBody.innerHTML = `
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                  <div class="rc-icon" style="background:${meta.bg}"><i class="fas ${meta.ic}"></i></div>
+                  <div style="font-weight:800;">${translations[currentLang][it.typeKey]}</div>
+                </div>
+                <div class="rc-meta">${translations[currentLang].requestDate}: ${it.requestDate || ''}</div>
+                ${it.absenceDate ? `<div class='rc-meta'>${translations[currentLang].absenceDate}: ${it.absenceDate}</div>` : ''}
+                ${(it.vacStart||it.vacEnd) ? `<div class='rc-meta'>${translations[currentLang].vacationStart}: ${it.vacStart||''} — ${translations[currentLang].vacationEnd}: ${it.vacEnd||''}</div>` : ''}
+                ${it.notes ? `<div class='rc-meta' style='margin-top:8px;'>${it.notes}</div>` : ''}
+                <div class='rc-meta' style='margin-top:10px; font-weight:700; color:${statusMeta.color};'>${statusLabel}</div>
+                ${it.managerReply ? `<div class='rc-meta' style='margin-top:6px;'>${it.managerReply}</div>` : ''}
+              `;
+            const pv = document.getElementById('requestPreview');
+            pv && pv.classList.add('visible');
+          }
+        });
+const previewModal = document.getElementById('requestPreview');
+        if (previewModal) {
+          previewModal.addEventListener('click', (e) => {
+            if (e.target.closest('[data-action="close-request-preview"]')) previewModal.classList.remove('visible');
+          });
+        }
+      }
+    }
+  });
+</script>
+
+</body>
+</html>
