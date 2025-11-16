@@ -503,7 +503,6 @@
     padding: 16px;
     visibility: hidden; opacity: 0;
     transition: visibility 0s .3s, opacity .3s ease;
-    overflow-y: auto; /* allow scrolling on small screens */
   }
   .modal-container.visible { visibility: visible; opacity: 1; transition: visibility 0s, opacity .3s ease; }
   .modal-backdrop {
@@ -517,19 +516,24 @@
     border-radius: 16px;
     width: 100%;
     max-width: 380px;
-    max-height: 90vh; /* keep modal inside viewport */
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
     transform: translateY(20px);
     transition: transform .3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     overflow: hidden; /* Prevent inner elements from visually spilling out */
     display:flex;
     flex-direction:column;
+    max-height: 90vh; /* keep modal inside viewport */
   }
   .modal-container.visible .modal-content { transform: translateY(0); }
   .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border-color); }
   .modal-header h3 { margin: 0; font-size: 18px; }
   .modal-header .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--muted); padding: 0 8px; }
-  .modal-body { padding: 20px; text-align: center; }
+  .modal-body {
+    padding: 20px;
+    text-align: center;
+    overflow-y: auto;           /* scroll with hand up/down */
+    -webkit-overflow-scrolling: touch;
+  }
   .modal-body .icon { font-size: 48px; color: var(--accent); margin-bottom: 16px; }
   .modal-body p { margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: var(--muted); }
   .modal-footer { display: flex; gap: 10px; justify-content: center; padding: 0 20px 20px; }
