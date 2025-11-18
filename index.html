@@ -1152,6 +1152,7 @@
     let workerShowAllMessages = false;
     let workerReplyMessageId = null;
     let cachedRequests = [];
+    let requestsLoaded = false;
     const statusMap = {
       pending: { ar: 'قيد المراجعة', en: 'Pending', bg: 'rgba(251,191,36,0.12)', color: '#b45309' },
       approved: { ar: 'مقبول', en: 'Approved', bg: 'rgba(34,197,94,0.12)', color: '#15803d' },
@@ -1636,6 +1637,8 @@
       } catch (_) {}
       workerRequestAlert = false;
       workerStatusAlert = false;
+      requestsLoaded = false;
+      cachedRequests = [];
        workerMessageAlert = false;
       applyWorkerIndicators();
       document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
@@ -1651,6 +1654,8 @@
       currentWorker = null;
       workerRequestAlert = false;
       workerStatusAlert = false;
+      requestsLoaded = false;
+      cachedRequests = [];
       workerMessageAlert = false;
       applyWorkerIndicators();
       closeModal(accountModal);
@@ -1886,6 +1891,7 @@
                   <div style="font-size:12px; margin-top: 2px; color: var(--muted);" data-lang-key="workerCard3_desc">${translations[currentLang]["workerCard3_desc"]}</div>
                 </div>
             </div>
+            ${createWorkerCard('requestsStats', 'requestsStats_desc', 'fa-chart-pie', 'linear-gradient(135deg,#8b5cf6,#a855f7)', 'requests_stats')}
             ${createWorkerCard('workerCard4', 'workerCard4_desc', 'fa-user-circle', 'linear-gradient(135deg,#64748b,#475569)', 'worker_profile', 'workerProfileIndicator')}
         </div>
 
@@ -2101,6 +2107,83 @@
       const absentDays = Object.values(days).filter(v => v==='absent').length;
       const totalMarked = presentDays + absentDays;
 
+      // --- Attendance Trend Chart Data ---
+      const attendanceTrendData = [];
+      const trendBaseDate = window.__attMonth || new Date();
+      for (let i = 5; i >= 0; i--) {
+          const d = new Date(trendBaseDate.getFullYear(), trendBaseDate.getMonth() - i, 1);
+          const year = d.getFullYear();
+          const month = d.getMonth() + 1;
+          const key = `attendance_${year}-${String(month).padStart(2, '0')}`;
+          const monthDays = JSON.parse(localStorage.getItem(key) || '{}').days || {};
+          const absentCount = Object.values(monthDays).filter(v => v === 'absent').length;
+          const presentCount = Object.values(monthDays).filter(v => v === 'present').length;
+          attendanceTrendData.push({
+              label: d.toLocaleDateString(currentLang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short' }),
+              absent: absentCount,
+              present: presentCount
+          });
+      }
+
+      const maxCount = Math.max(...attendanceTrendData.flatMap(d => [d.absent, d.present]), 1);
+      const chartHeight = 150;
+      const chartWidth = 400;
+      const padding = { top: 20, right: 20, bottom: 30, left: 30 };
+      const xStep = (chartWidth - padding.left - padding.right) / (attendanceTrendData.length - 1);
+
+      const getPoints = (dataKey) => attendanceTrendData.map((d, i) => {
+          const x = padding.left + i * xStep;
+          const y = chartHeight - padding.bottom - (d[dataKey] / maxCount) * (chartHeight - padding.top - padding.bottom);
+          return `${x},${y}`;
+      }).join(' ');
+
+      const absentPoints = getPoints('absent');
+      const presentPoints = getPoints('present');
+
+      const attendanceLineChartSvg = `
+        <svg viewBox="0 0 ${chartWidth} ${chartHeight}" style="width:100%; height:auto; overflow:visible;">
+            <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${chartHeight - padding.bottom}" stroke="var(--border-color)" stroke-width="1"/>
+            <text x="${padding.left - 8}" y="${padding.top}" font-size="10" fill="var(--muted)" text-anchor="end">${maxCount}</text>
+            <text x="${padding.left - 8}" y="${chartHeight - padding.bottom}" font-size="10" fill="var(--muted)" text-anchor="end">0</text>
+
+            ${attendanceTrendData.map((d, i) => {
+                const x = padding.left + i * xStep;
+                return `<text x="${x}" y="${chartHeight - padding.bottom + 15}" font-size="10" fill="var(--muted)" text-anchor="middle">${d.label}</text>`;
+            }).join('')}
+
+            <defs>
+                <linearGradient id="absenceAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#ef4444" stop-opacity="0.2"/>
+                    <stop offset="100%" stop-color="#ef4444" stop-opacity="0"/>
+                </linearGradient>
+                <linearGradient id="presenceAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#16a34a" stop-opacity="0.2"/>
+                    <stop offset="100%" stop-color="#16a34a" stop-opacity="0"/>
+                </linearGradient>
+            </defs>
+
+            <!-- Presence Line -->
+            <path d="M${padding.left},${chartHeight - padding.bottom} L${presentPoints} L${chartWidth - padding.right},${chartHeight - padding.bottom} Z" fill="url(#presenceAreaGradient)" />
+            <polyline points="${presentPoints}" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            ${attendanceTrendData.map((d, i) => `<circle cx="${padding.left + i * xStep}" cy="${chartHeight - padding.bottom - (d.present / maxCount) * (chartHeight - padding.top - padding.bottom)}" r="3" fill="#16a34a" stroke="var(--card)" stroke-width="1.5" />`).join('')}
+
+            <!-- Absence Line -->
+            <path d="M${padding.left},${chartHeight - padding.bottom} L${absentPoints} L${chartWidth - padding.right},${chartHeight - padding.bottom} Z" fill="url(#absenceAreaGradient)" />
+            <polyline points="${absentPoints}" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            ${attendanceTrendData.map((d, i) => `<circle cx="${padding.left + i * xStep}" cy="${chartHeight - padding.bottom - (d.absent / maxCount) * (chartHeight - padding.top - padding.bottom)}" r="3" fill="#ef4444" stroke="var(--card)" stroke-width="1.5" />`).join('')}
+        </svg>
+        <div style="display:flex; justify-content:center; gap:16px; margin-top:10px; font-size:12px; font-weight:700;">
+            <div style="display:flex; align-items:center; gap:6px;">
+                <div style="width:12px; height:12px; border-radius:3px; background-color:#16a34a;"></div>
+                <span data-lang-key="legendPresent">${translations[currentLang].legendPresent}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <div style="width:12px; height:12px; border-radius:3px; background-color:#ef4444;"></div>
+                <span data-lang-key="legendAbsent">${translations[currentLang].legendAbsent}</span>
+            </div>
+        </div>
+      `;
+
       // Month label in current language
       const monthLabel = sel.toLocaleDateString(currentLang==='ar'?'ar-DZ':'en-US', { month: 'long', year: 'numeric' });
 
@@ -2214,6 +2297,11 @@
             <button class="btn" style="background:#ef4444" id="markAbsent"><i class="fas fa-user-slash"></i> ${currentLang==='ar'?'غياب':'Absent'}</button>
             <button class="btn" style="background:#64748b" id="clearDay"><i class="fas fa-eraser"></i> ${currentLang==='ar'?'مسح':'Clear'}</button>
           </div>
+        </div>
+
+        <div class="card" style="margin-top:16px; max-width:520px; margin-left:auto; margin-right:auto;">
+            <h4 style="margin:0 0 16px; width:100%; text-align:${isRTL ? 'right' : 'left'};" data-lang-key="absenceTrendTitle">${translations[currentLang].absenceTrendTitle}</h4>
+            ${attendanceLineChartSvg}
         </div>
 
         <div class="activity-list" id="activityList">
@@ -2679,6 +2767,249 @@
       `;
     }
 
+    function getRequestsStatsView() {
+      const isRTL = currentLang === 'ar';
+      const backIcon = isRTL ? 'fa-arrow-right' : 'fa-arrow-left';
+
+      // --- Line Chart Data ---
+      const trendData = [];
+      const trendBaseDate = window.__statsMonth || new Date();
+      for (let i = 5; i >= 0; i--) {
+          const d = new Date(trendBaseDate.getFullYear(), trendBaseDate.getMonth() - i, 1);
+          const year = d.getFullYear();
+          const month = d.getMonth();
+          const count = cachedRequests.filter(r => {
+              if (!r.requestDate || typeof r.requestDate !== 'string') return false;
+              try {
+                  const reqDate = new Date(r.requestDate);
+                  return reqDate.getFullYear() === year && reqDate.getMonth() === month;
+              } catch (e) { return false; }
+          }).length;
+          trendData.push({
+              label: d.toLocaleDateString(currentLang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short' }),
+              count: count
+          });
+      }
+
+      const maxCount = Math.max(...trendData.map(d => d.count), 1); // Avoid division by zero
+      const chartHeight = 150;
+      const chartWidth = 400;
+      const padding = { top: 20, right: 20, bottom: 30, left: 30 };
+
+      const points = trendData.map((d, i) => {
+          const x = padding.left + i * (chartWidth - padding.left - padding.right) / (trendData.length - 1);
+          const y = chartHeight - padding.bottom - (d.count / maxCount) * (chartHeight - padding.top - padding.bottom);
+          return `${x},${y}`;
+      }).join(' ');
+
+      const lineChartSvg = `
+        <svg viewBox="0 0 ${chartWidth} ${chartHeight}" style="width:100%; height:auto; overflow:visible;">
+            <!-- Y-axis lines and labels -->
+            <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${chartHeight - padding.bottom}" stroke="var(--border-color)" stroke-width="1"/>
+            <text x="${padding.left - 8}" y="${padding.top}" font-size="10" fill="var(--muted)" text-anchor="end">${maxCount}</text>
+            <text x="${padding.left - 8}" y="${chartHeight - padding.bottom}" font-size="10" fill="var(--muted)" text-anchor="end">0</text>
+
+            <!-- X-axis labels -->
+            ${trendData.map((d, i) => {
+                const x = padding.left + i * (chartWidth - padding.left - padding.right) / (trendData.length - 1);
+                return `<text x="${x}" y="${chartHeight - padding.bottom + 15}" font-size="10" fill="var(--muted)" text-anchor="middle">${d.label}</text>`;
+            }).join('')}
+
+            <!-- Gradient for area fill -->
+            <defs>
+                <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+                </linearGradient>
+            </defs>
+
+            <!-- Area fill path -->
+            <path d="M${padding.left},${chartHeight - padding.bottom} L${points} L${chartWidth - padding.right},${chartHeight - padding.bottom} Z" fill="url(#areaGradient)" />
+
+            <!-- Line path -->
+            <polyline points="${points}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <!-- Data point circles -->
+            ${trendData.map((d, i) => {
+                const x = padding.left + i * (chartWidth - padding.left - padding.right) / (trendData.length - 1);
+                const y = chartHeight - padding.bottom - (d.count / maxCount) * (chartHeight - padding.top - padding.bottom);
+                return `<circle cx="${x}" cy="${y}" r="3" fill="var(--accent)" stroke="var(--card)" stroke-width="1.5" />`;
+            }).join('')}
+        </svg>
+      `;
+
+      // --- Monthly filter logic ---
+      const today = new Date();
+      if (!window.__statsMonth) window.__statsMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const sel = window.__statsMonth;
+      const yyyy = sel.getFullYear();
+      const mm = sel.getMonth();
+      const isFutureMonth = sel.getFullYear() > today.getFullYear() || (sel.getFullYear() === today.getFullYear() && sel.getMonth() >= today.getMonth());
+
+      const monthLabel = sel.toLocaleDateString(currentLang === 'ar' ? 'ar-DZ' : 'en-US', { month: 'long', year: 'numeric' });
+
+      const filteredRequests = cachedRequests.filter(r => {
+        if (!r.requestDate || typeof r.requestDate !== 'string') return false;
+        try {
+          const reqDate = new Date(r.requestDate);
+          return reqDate.getFullYear() === yyyy && reqDate.getMonth() === mm;
+        } catch (e) {
+          return false;
+        }
+      });
+
+      const total = filteredRequests.length;
+      if (total === 0) {
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; gap: 12px;">
+            <button data-action="navigate" data-view="home" class="btn icon-btn" title="${translations[currentLang].backToHome}"><i class="fas ${backIcon}"></i></button>
+            <h3 style="margin:0; font-weight:800; flex-grow: 1; text-align:${isRTL ? 'right' : 'left'};" data-lang-key="requestsStats">${translations[currentLang].requestsStats}</h3>
+            <button id="statsGoToCurrentMonth" class="btn ghost" title="${translations[currentLang].currentMonthLabel}">
+              <i class="fas fa-calendar-day"></i>
+            </button>
+          </div>
+          <div class="att-header" style="max-width:none; margin-bottom:16px;">
+            <button class="btn icon-btn ghost" id="statsPrevMonth"><i class="fas ${isRTL ? 'fa-chevron-right' : 'fa-chevron-left'}"></i></button>
+            <div class="att-month">${monthLabel}</div>
+            <button class="btn icon-btn ghost" id="statsNextMonth" ${isFutureMonth ? 'disabled' : ''}><i class="fas ${isRTL ? 'fa-chevron-left' : 'fa-chevron-right'}"></i></button>
+          </div>
+          <div style="text-align:center; padding: 40px 20px; color: var(--muted); border: 2px dashed var(--border-color); border-radius: 16px;">
+            ${currentLang === 'ar' ? 'لا توجد طلبات مسجلة في هذا الشهر.' : 'No requests were recorded for this month.'}
+          </div>
+        `;
+      }
+
+      const pending = filteredRequests.filter(r => r.status === 'pending').length;
+      const approved = filteredRequests.filter(r => r.status === 'approved').length;
+      const rejected = filteredRequests.filter(r => r.status === 'rejected').length;
+
+      const typesCount = filteredRequests.reduce((acc, r) => {
+        const typeName = translations[currentLang][r.typeKey] || r.typeKey;
+        acc[typeName] = (acc[typeName] || 0) + 1;
+        return acc;
+      }, {});
+
+      const colors = ['#3b82f6', '#16a34a', '#ef4444', '#f97316', '#6366f1', '#a855f7'];
+      const pieSegments = Object.entries(typesCount).map(([type, count], index) => {
+        const percentage = total > 0 ? (count / total) * 100 : 0;
+        return { type, count, percentage, color: colors[index % colors.length] };
+      });
+
+      const pieGradient = pieSegments.length > 0 ? pieSegments.reduce((acc, seg) => {
+          const start = acc.lastAngle;
+          const end = start + seg.percentage;
+          acc.parts.push(`${seg.color} ${start}% ${end}%`);
+          acc.lastAngle = end;
+          return acc;
+      }, { parts: [], lastAngle: 0 }).parts.join(', ') : 'var(--border-color)';
+
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; gap: 12px;">
+            <button data-action="navigate" data-view="home" class="btn icon-btn" title="${translations[currentLang].backToHome}"><i class="fas ${backIcon}"></i></button>
+            <h3 style="margin:0; font-weight:800; flex-grow: 1; text-align:${isRTL ? 'right' : 'left'};" data-lang-key="requestsStats">${translations[currentLang].requestsStats}</h3>
+            <button id="statsGoToCurrentMonth" class="btn ghost" title="${translations[currentLang].currentMonthLabel}">
+              <i class="fas fa-calendar-day"></i>
+            </button>
+        </div>
+
+        <div class="att-header" style="max-width:none; margin-bottom:16px;">
+            <button class="btn icon-btn ghost" id="statsPrevMonth"><i class="fas ${isRTL ? 'fa-chevron-right' : 'fa-chevron-left'}"></i></button>
+            <div class="att-month">${monthLabel}</div>
+            <button class="btn icon-btn ghost" id="statsNextMonth" ${isFutureMonth ? 'disabled' : ''}><i class="fas ${isRTL ? 'fa-chevron-left' : 'fa-chevron-right'}"></i></button>
+        </div>
+
+        <div class="att-summary" style="grid-template-columns:repeat(4,1fr); max-width:none;">
+          <div class="att-box"><div class="lbl">${translations[currentLang].totalRequests}</div><div class="val">${total}</div></div>
+          <div class="att-box"><div class="lbl">${translations[currentLang].statusPending}</div><div class="val">${pending}</div></div>
+          <div class="att-box"><div class="lbl">${translations[currentLang].statusApproved}</div><div class="val">${approved}</div></div>
+          <div class="att-box"><div class="lbl">${translations[currentLang].statusRejected}</div><div class="val">${rejected}</div></div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+            <h4 style="margin:0 0 16px; width:100%; text-align:${isRTL ? 'right' : 'left'};" data-lang-key="monthlyTrend">${translations[currentLang].monthlyTrend}</h4>
+            ${lineChartSvg}
+        </div>
+
+        <div class="card" style="margin-top:16px; align-items:center;">
+          <h4 style="margin:0 0 16px;" data-lang-key="requestsByType">${translations[currentLang].requestsByType}</h4>
+          <div style="display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:24px; width:100%;">
+            <div style="width:150px; height:150px; border-radius:50%; background:conic-gradient(${pieGradient});"></div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              ${pieSegments.map(seg => `
+                <div style="display:flex; align-items:center; gap:8px; font-size:13px;">
+                  <div style="width:12px; height:12px; border-radius:4px; background-color:${seg.color};"></div>
+                  <span>${seg.type} (${seg.count})</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getAttendanceDetailView(dateString) {
+      const isRTL = currentLang === 'ar';
+      const backIcon = isRTL ? 'fa-arrow-right' : 'fa-arrow-left';
+
+      const [year, month, day] = dateString.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+
+      const keyMonth = `${year}-${String(month).padStart(2, '0')}`;
+      const storageKey = `attendance_${keyMonth}`;
+      const data = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      const status = data.days ? data.days[dateString] : null;
+      const times = data.times ? data.times[dateString] : null;
+
+      let statusLabel, statusIcon, statusColor, detailsHtml;
+
+      if (status === 'present') {
+          statusLabel = translations[currentLang].legendPresent;
+          statusIcon = 'fa-circle-check';
+          statusColor = '#16a34a';
+          detailsHtml = `
+              <div style="display:flex; gap:12px; width:100%; justify-content:center; margin-top:16px;">
+                  <div class="att-box" style="flex:1;"><div class="lbl">${translations[currentLang].checkIn}</div><div class="val">${times?.in || '—'}</div></div>
+                  <div class="att-box" style="flex:1;"><div class="lbl">${translations[currentLang].checkOut}</div><div class="val">${times?.out || '—'}</div></div>
+              </div>
+          `;
+      } else if (status === 'absent') {
+          statusLabel = translations[currentLang].legendAbsent;
+          statusIcon = 'fa-circle-xmark';
+          statusColor = '#ef4444';
+          detailsHtml = `<p style="color:var(--muted); font-size:13px; margin-top:16px;">${isRTL ? 'تم تسجيل هذا اليوم كـ "غياب".' : 'This day was marked as "Absent".'}</p>`;
+      } else {
+          statusLabel = isRTL ? 'غير مسجل' : 'Not Recorded';
+          statusIcon = 'fa-circle-question';
+          statusColor = 'var(--muted)';
+          detailsHtml = `<p style="color:var(--muted); font-size:13px; margin-top:16px;">${isRTL ? 'لم يتم تسجيل حالة لهذا اليوم بعد.' : 'No status has been recorded for this day yet.'}</p>`;
+      }
+
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; gap: 12px;">
+          <button data-action="navigate" data-view="attendance" class="btn icon-btn" title="${translations[currentLang].backToHome}"><i class="fas ${backIcon}"></i></button>
+          <h3 style="margin:0; font-weight:800; flex-grow: 1; text-align:${isRTL ? 'right' : 'left'};" data-lang-key="attendanceDetailTitle">${translations[currentLang].attendanceDetailTitle}</h3>
+        </div>
+        <div class="card" style="align-items:center; text-align:center; padding: 24px;">
+          <div style="font-size:48px; color:${statusColor}; margin-bottom:12px;"><i class="fas ${statusIcon}"></i></div>
+          <h4 style="margin:0; font-size:18px; font-weight:800;">${statusLabel}</h4>
+          <p style="margin:4px 0 0; color:var(--muted); font-weight:700;">
+            ${date.toLocaleDateString(isRTL ? 'ar-DZ' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
+          <div style="width:100%; max-width:320px;">
+            ${detailsHtml || ''}
+          </div>
+        </div>
+      `;
+    }
+
+    const loadRequestsAsync = async () => {
+      if (!currentWorker || !currentWorker.id) return [];
+      const items = await fetchWorkerRequests(currentWorker.id);
+      cachedRequests = items;
+      requestsLoaded = true;
+      return items;
+    };
+
     function renderView(viewName) {
       currentView = viewName;
       let content = '';
@@ -2747,9 +3078,38 @@
           content = getWorkerProfileView();
           if (headerSubtitle) headerSubtitle.setAttribute('data-lang-key', 'workerCard4');
           break;
+        case 'requests_stats': {
+            if (!currentWorker || !currentWorker.id) {
+                openConfirmModal(
+                    currentLang === 'ar' ? 'يجب تسجيل الدخول لعرض الإحصائيات.' : 'You must sign in to view stats.',
+                    () => renderView('pin_login')
+                );
+                return;
+            }
+            // If requests have been loaded (even if empty), show the stats. Otherwise, show loading and fetch them.
+            if (requestsLoaded) {
+                content = getRequestsStatsView();
+                if (headerSubtitle) headerSubtitle.setAttribute('data-lang-key', 'requestsStats');
+            } else {
+                content = `<div style="text-align:center; padding:32px;">${translations[currentLang].loading}</div>`;
+                loadRequestsAsync().then(() => {
+                    // Re-render now that data is available.
+                    // We need to set the active nav item again as renderView might be called from a different context.
+                    const navItem = document.querySelector('.nav-item[data-view="requests_stats"]');
+                    if (navItem) navItem.classList.add('active');
+                    renderView('requests_stats'); 
+                });
+            }
+        }
+          break;
         default:
           content = getHomeView();
           if(headerSubtitle) headerSubtitle.setAttribute('data-lang-key', 'home');
+      }
+      if (viewName.startsWith('attendance_detail:')) {
+        const dateString = viewName.split(':')[1];
+        content = getAttendanceDetailView(dateString);
+        if (headerSubtitle) headerSubtitle.setAttribute('data-lang-key', 'attendanceDetailTitle');
       }
       mainContent.innerHTML = `<div class="view-container">${content}</div>`;
       // After rendering, update dynamic elements like date
@@ -3000,7 +3360,7 @@
 
         const pad2 = (n) => String(n).padStart(2,'0');
         const localKey = (d) => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
-        let selected = null;
+        let selected = localKey(new Date()); // Default to today
         document.querySelectorAll('.att-day').forEach(el=>{
           if (el.classList.contains('muted')) return;
           el.addEventListener('click', ()=>{
@@ -3008,10 +3368,9 @@
             el.style.outline = '2px solid var(--accent)';
             selected = el.getAttribute('data-att-day');
           });
-          el.addEventListener('dblclick', ()=>{
-            // quick toggle present/absent
-            const d = read(); d.days = d.days||{}; const k = el.getAttribute('data-att-day');
-            const cur = d.days[k]; d.days[k] = cur==='present' ? 'absent' : 'present'; write(d); renderView('attendance');
+          el.addEventListener('dblclick', () => {
+            const dayKey = el.getAttribute('data-att-day');
+            if (dayKey) renderView(`attendance_detail:${dayKey}`);
           });
         });
 
@@ -3229,13 +3588,6 @@
         });
       }
 
-      const loadRequestsAsync = async () => {
-        if (!currentWorker || !currentWorker.id) return [];
-        const items = await fetchWorkerRequests(currentWorker.id);
-        cachedRequests = items;
-        return items;
-      };
-
       const renderRequests = async () => {
         const list = document.getElementById('requestsList');
         if (!list) return;
@@ -3445,6 +3797,22 @@ const previewModal = document.getElementById('requestPreview');
           previewModal.addEventListener('click', (e) => {
             if (e.target.closest('[data-action="close-request-preview"]')) previewModal.classList.remove('visible');
           });
+        }
+      }
+
+      if (viewName === 'requests_stats') {
+        const prevBtn = document.getElementById('statsPrevMonth');
+        const nextBtn = document.getElementById('statsNextMonth');
+        const currentBtn = document.getElementById('statsGoToCurrentMonth');
+
+        if (currentBtn) {
+          currentBtn.addEventListener('click', () => { const today = new Date(); window.__statsMonth = new Date(today.getFullYear(), today.getMonth(), 1); renderView('requests_stats'); });
+        }
+        if (prevBtn) {
+          prevBtn.addEventListener('click', () => { const m = window.__statsMonth; window.__statsMonth = new Date(m.getFullYear(), m.getMonth() - 1, 1); renderView('requests_stats'); });
+        }
+        if (nextBtn) {
+          nextBtn.addEventListener('click', () => { const m = window.__statsMonth; window.__statsMonth = new Date(m.getFullYear(), m.getMonth() + 1, 1); renderView('requests_stats'); });
         }
       }
     }
